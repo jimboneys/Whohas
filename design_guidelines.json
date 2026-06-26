@@ -1,0 +1,183 @@
+{
+  "app_name": "WhoHas",
+  "personality": "4 Tactile / Playful LIGHT",
+  "personality_one_liner": "A vibrant, touchable, and fast deal-finding experience that feels like a game, grounded by deep ink typography and punchy coral accents.",
+  "color": {
+    "surface": "#FDFBF7",
+    "onSurface": "#1A1B20",
+    "surfaceSecondary": "#FFFFFF",
+    "onSurfaceSecondary": "#1A1B20",
+    "surfaceTertiary": "#F2EFEB",
+    "onSurfaceTertiary": "#4A4D55",
+    "surfaceInverse": "#1A1B20",
+    "onSurfaceInverse": "#FFFFFF",
+    "brand": "#FF5A5F",
+    "brandPrimary": "#FF5A5F",
+    "onBrandPrimary": "#FFFFFF",
+    "brandSecondary": "#06D6A0",
+    "onBrandSecondary": "#1A1B20",
+    "brandTertiary": "#FFEDEE",
+    "onBrandTertiary": "#FF5A5F",
+    "success": "#06D6A0",
+    "onSuccess": "#1A1B20",
+    "warning": "#FFD166",
+    "onWarning": "#1A1B20",
+    "error": "#EF476F",
+    "onError": "#FFFFFF",
+    "info": "#2B2D42",
+    "onInfo": "#FFFFFF",
+    "border": "#EAE6DF",
+    "borderStrong": "#D1CCC2",
+    "divider": "#F0ECE5"
+  },
+  "typography": {
+    "displayFontFamily": "Fredoka",
+    "textFontFamily": "Nunito",
+    "scale": {
+      "sm": 12,
+      "base": 14,
+      "lg": 16,
+      "xl": 20,
+      "2xl": 24
+    }
+  },
+  "spacing": {
+    "rule": "Generous touch targets. Use md/lg padding inside cards to make them feel chunky and touchable. Never cramp price text.",
+    "xs": 4,
+    "sm": 8,
+    "md": 12,
+    "lg": 16,
+    "xl": 24,
+    "2xl": 32,
+    "3xl": 48
+  },
+  "radius_tokens": {
+    "sm": 8,
+    "md": 16,
+    "lg": 24,
+    "pill": 999
+  },
+  "shadow_tier": "2",
+  "navigation": "bottom_tabs",
+  "icon_set": "Phosphor",
+  "glassmorphism": {
+    "enabled": "true",
+    "do's": [
+      "bottom tab bar",
+      "floating action buttons",
+      "sticky header over scrolling content",
+      "hero image scrims"
+    ],
+    "dont's": [
+      "form fields",
+      "cards in dense lists",
+      "body content backgrounds"
+    ]
+  },
+  "platform_libraries": {
+    "glass": {
+      "ios": "expo-glass-effect",
+      "android": "expo-blur",
+      "low_end_android_fallback": "solid surfaceSecondary"
+    },
+    "image": "expo-image",
+    "blur": "expo-blur",
+    "bottom_sheet": "@gorhom/bottom-sheet",
+    "animation": "react-native-reanimated",
+    "gesture": "react-native-gesture-handler"
+  },
+  "screens": [
+    {
+      "name": "Home",
+      "purpose": "The main entry point to instantly search for a product or browse curated deals.",
+      "states": {
+        "loading": "Bouncing brand icon in the center of the screen.",
+        "empty": "N/A - Home is curated.",
+        "error": "Playful oops illustration with a Coral retry button."
+      },
+      "layout": "Large playful search bar with pill radius. Horizontal scrolling chip row for categories (using brandTertiary). 'Trending Deals' section with horizontal scrolling cards (width: screenWidth minus 2*lg padding). Each card has a large thumbnail, and an oversized price badge."
+    },
+    {
+      "name": "Search Results",
+      "purpose": "Show exact and similar product matches quickly.",
+      "states": {
+        "loading": "Skeleton rows mimicking the product cards.",
+        "empty": "Playful 3D empty box illustration with text 'No products found'.",
+        "error": "Standard error with retry button."
+      },
+      "layout": "Vertical list of chunky cards. Each card has a left-aligned product thumbnail, right-aligned details: Product name (Fredoka), lowest price (BrandPrimary), and store count badge. Use 'Best Match' pill on the top result."
+    },
+    {
+      "name": "Product Detail",
+      "purpose": "The core comparison experience showing product info and ranked stores.",
+      "states": {
+        "loading": "Skeleton image hero and store rows.",
+        "empty": "N/A",
+        "error": "Standard error with retry button."
+      },
+      "layout": "Top hero image with glassmorphism top header overlay. Large Product Name and 'Lowest Price' highlighted. Vertical list for Stores, sorted lowest to highest. The lowest store has a 'Best Deal' badge and a Mint/Coral border. Savings shown in Mint (success). Sticky 'Buy Now' button at the bottom using safe-area."
+    },
+    {
+      "name": "Categories Browse",
+      "purpose": "Visual grid of product categories.",
+      "states": {
+        "loading": "Skeleton grid.",
+        "empty": "N/A",
+        "error": "Standard error with retry."
+      },
+      "layout": "2-column flexWrap grid. Each category tile uses surfaceSecondary, lg padding, large 32pt Phosphor icon inside a brandTertiary circle, and bold text centered."
+    },
+    {
+      "name": "Watchlist",
+      "purpose": "Local saved deals tracking price drops.",
+      "states": {
+        "loading": "Skeleton list.",
+        "empty": "Illustration of a playful character or empty box with text 'Your watchlist is empty'.",
+        "error": "Standard error."
+      },
+      "layout": "List of saved product cards, similar to Search Results but with a prominent 'Price Dropped' indicator (in Mint) if applicable."
+    }
+  ],
+  "images": {
+    "amazon_logo": {
+      "url": "https://images.pexels.com/photos/4560039/pexels-photo-4560039.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+      "alt": "Amazon App Icon Logo"
+    },
+    "target_store": {
+      "url": "https://images.unsplash.com/photo-1615557854978-2eac0cd47b0d?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2OTF8MHwxfHNlYXJjaHwxfHxUYXJnZXQlMjBsb2dvJTIwdHJhbnNwYXJlbnQlMjBwbmd8ZW58MHx8fHwxNzgyNDYxMzkxfDA&ixlib=rb-4.1.0&q=85",
+      "alt": "Target Store"
+    },
+    "nike_dunks": {
+      "url": "https://images.unsplash.com/photo-1692482386532-7a3c6a051144?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NTYxODl8MHwxfHNlYXJjaHwzfHxuaWtlJTIwZHVuayUyMGxvdyUyMHNuZWFrZXJzJTIwaXNvbGF0ZWR8ZW58MHx8fHwxNzgyNDYxMzkxfDA&ixlib=rb-4.1.0&q=85",
+      "alt": "Nike Dunk Low Sneakers"
+    },
+    "airpods_max": {
+      "url": "https://images.pexels.com/photos/8001054/pexels-photo-8001054.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+      "alt": "Apple AirPods Max Pink"
+    },
+    "ps5_controller": {
+      "url": "https://images.unsplash.com/photo-1753297514865-016ed7975966?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1MDV8MHwxfHNlYXJjaHwxfHxzb255JTIwcGxheXN0YXRpb24lMjA1JTIwY29udHJvbGxlciUyMHdoaXRlJTIwaXNvbGF0ZWR8ZW58MHx8fHwxNzgyNDYxMzkxfDA&ixlib=rb-4.1.0&q=85",
+      "alt": "Sony PlayStation 5 Controller White"
+    },
+    "empty_box": {
+      "url": "https://images.pexels.com/photos/8066785/pexels-photo-8066785.png?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+      "alt": "Clean white box 3D mockup"
+    }
+  },
+  "instructions_to_main_agent": [
+    "Strictly follow the Tactile / Playful aesthetic (Personality 4). Use thick, chunky components with 'lg' to 'pill' radii. The app should feel approachable, fun, and highly touchable.",
+    "NO BLUE, INDIGO, OR PURPLE ALLOWED. Use Coral (#FF5A5F) for primary actions, Mint (#06D6A0) for success/savings, and Mustard (#FFD166) for warnings/highlights. The base typography is a deep ink (#1A1B20) on a warm off-white (#FDFBF7) background.",
+    "Typography: Use 'Fredoka' for all headings and big price numbers to give a bouncy feel. Use 'Nunito' for body text. All font weights cap at 500.",
+    "On the Product Detail screen, list the stores in a vertical list, sorted by lowest price. Highlight the #1 lowest price store card with a 'borderStrong' in Mint or Coral, and an absolute positioned 'Best Deal' badge intersecting the top edge of the card.",
+    "Implement a sticky 'Buy Now' CTA wrapped in a Glassmorphism container at the bottom of the Product Detail screen.",
+    "Use Phosphor filled icons (24pt) for tab bars and standard list actions.",
+    "Always apply a top-to-bottom linear gradient scrim when placing text on top of images (e.g., hero cards).",
+    "Empty states should utilize the 'empty_box' image along with playful Fredoka typography to keep the user engaged even when there's no data."
+  ],
+  "haptics": {
+    "tab_press": "light",
+    "button_press": "medium",
+    "add_to_watchlist": "success",
+    "pull_to_refresh": "light"
+  }
+}

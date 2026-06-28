@@ -35,6 +35,12 @@ export async function ask(question: string): Promise<AskResponse> {
   return res.json();
 }
 
+export async function suggest(q: string): Promise<string[]> {
+  const res = await fetch(`${BASE}/api/suggest?q=${encodeURIComponent(q)}`);
+  if (!res.ok) return [];
+  return res.json();
+}
+
 export async function trending(): Promise<TrendingGroup[]> {
   const res = await fetch(`${BASE}/api/trending-questions`);
   if (!res.ok) throw new Error(`Request failed (${res.status})`);

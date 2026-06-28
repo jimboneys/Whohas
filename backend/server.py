@@ -270,6 +270,32 @@ async def trending_questions():
     return TRENDING
 
 
+def normalize_query(q: str) -> str:
+    ql = q.strip().rstrip("?")
+    if re.match(r"^(who|where|which|what|when|how|do|does|is|are|can)\b", ql, re.IGNORECASE):
+        return ql + "?"
+    return f"Who has {ql}?"
+
+
+@api_router.get("/suggest")
+async def suggest(q: str = ""):
+    q = q.strip()
+    if not q:
+        return []
+    all_qs = [qq for g in TRENDING for qq in g["questions"]]
+    tokens = [t for t in re.split(r"\s+", q.lower()) if len(t) > 2]
+    matches = [qq for qq in all_qs if tokens and any(t in qq.lower() for t in tokens)]
+    out: List[str] = []
+    seen = set()
+    for s in [normalize_query(q)] + matches:
+        if s.lower() not in seen:
+            out.append(s)
+            seen.add(s.lower())
+        if len(out) >= 6:
+            break
+    return out
+
+
 app.include_router(api_router)
 app.add_middleware(
     CORSMiddleware, allow_credentials=True, allow_origins=["*"],

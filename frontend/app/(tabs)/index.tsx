@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import {
   View, Text, TextInput, StyleSheet, ScrollView, Pressable,
   KeyboardAvoidingView, Platform, Keyboard,
@@ -10,6 +10,7 @@ import * as Haptics from "expo-haptics";
 
 import { colors, fonts, spacing, radius, shadow } from "@/src/theme";
 import { getHistory } from "@/src/history";
+import { suggest } from "@/src/api";
 
 const EXAMPLES = [
   "the best wings",
@@ -24,12 +25,25 @@ export default function AskScreen() {
   const router = useRouter();
   const [q, setQ] = useState("");
   const [recent, setRecent] = useState<string[]>([]);
+  const [suggestions, setSuggestions] = useState<string[]>([]);
 
   useFocusEffect(
     useCallback(() => {
       getHistory().then((h) => setRecent(h.slice(0, 4).map((x) => x.q)));
     }, [])
   );
+
+  useEffect(() => {
+    const v = q.trim();
+    if (!v) {
+      setSuggestions([]);
+      return;
+    }
+    const t = setTimeout(() => {
+      suggest(v).then(setSuggestions).catch(() => setSuggestions([]));
+    }, 250);
+    return () => clearTimeout(t);
+  }, [q]);
 
   const submit = (text: string) => {
     const value = text.trim();
@@ -82,33 +96,53 @@ export default function AskScreen() {
           </Pressable>
         </View>
 
-        <Text style={styles.sectionLabel}>TRY ASKING</Text>
-        <View style={styles.chipWrap}>
-          {EXAMPLES.map((e) => (
-            <Pressable
-              key={e}
-              testID={`example-chip-${e.replace(/\s+/g, "-")}`}
-              style={({ pressed }) => [styles.chip, pressed && { backgroundColor: colors.brand }]}
-              onPress={() => askChip(e)}
-            >
-              <Text style={styles.chipText}>{e}</Text>
-            </Pressable>
-          ))}
-        </View>
-
-        {recent.length > 0 && (
+        {q.trim().length === 0 ? (
           <>
-            <Text style={styles.sectionLabel}>RECENT</Text>
-            {recent.map((r) => (
+            <Text style={styles.sectionLabel}>TRY ASKING</Text>
+            <View style={styles.chipWrap}>
+              {EXAMPLES.map((e) => (
+                <Pressable
+                  key={e}
+                  testID={`example-chip-${e.replace(/\s+/g, "-")}`}
+                  style={({ pressed }) => [styles.chip, pressed && { backgroundColor: colors.brand }]}
+                  onPress={() => askChip(e)}
+                >
+                  <Text style={styles.chipText}>{e}</Text>
+                </Pressable>
+              ))}
+            </View>
+
+            {recent.length > 0 && (
+              <>
+                <Text style={styles.sectionLabel}>RECENT</Text>
+                {recent.map((r) => (
+                  <Pressable
+                    key={r}
+                    testID={`recent-${r.replace(/\s+/g, "-")}`}
+                    style={styles.recentRow}
+                    onPress={() => submit(r)}
+                  >
+                    <Ionicons name="time-outline" size={18} color={colors.onSurfaceTertiary} />
+                    <Text style={styles.recentText} numberOfLines={1}>{r}</Text>
+                    <Ionicons name="arrow-up-outline" size={16} color="#C9C3B8" style={{ transform: [{ rotate: "45deg" }] }} />
+                  </Pressable>
+                ))}
+              </>
+            )}
+          </>
+        ) : (
+          <>
+            <Text style={styles.sectionLabel}>SUGGESTIONS</Text>
+            {suggestions.map((s, i) => (
               <Pressable
-                key={r}
-                testID={`recent-${r.replace(/\s+/g, "-")}`}
+                key={s}
+                testID={`suggestion-${i}`}
                 style={styles.recentRow}
-                onPress={() => submit(r)}
+                onPress={() => submit(s)}
               >
-                <Ionicons name="time-outline" size={18} color={colors.onSurfaceTertiary} />
-                <Text style={styles.recentText} numberOfLines={1}>{r}</Text>
-                <Ionicons name="arrow-up-outline" size={16} color="#C9C3B8" style={{ transform: [{ rotate: "45deg" }] }} />
+                <Ionicons name={i === 0 ? "sparkles" : "search"} size={18} color={colors.brand} />
+                <Text style={styles.recentText} numberOfLines={1}>{s}</Text>
+                <Ionicons name="arrow-forward" size={16} color="#C9C3B8" />
               </Pressable>
             ))}
           </>

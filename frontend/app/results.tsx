@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import {
-  View, Text, StyleSheet, ScrollView, Pressable, ActivityIndicator, RefreshControl,
+  View, Text, StyleSheet, ScrollView, Pressable, ActivityIndicator, RefreshControl, Share,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -45,6 +45,21 @@ export default function ResultsScreen() {
     WebBrowser.openBrowserAsync(url).catch(() => {});
   };
 
+  const shareAnswer = async () => {
+    if (!data) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+    const lines = [`🔎 ${question}`, "", data.summary, ""];
+    data.items.slice(0, 3).forEach((it) => {
+      lines.push(`${it.rank === 1 ? "🏆" : `${it.rank}.`} ${it.name}`);
+    });
+    lines.push("", "Found with WhoHas");
+    try {
+      await Share.share({ message: lines.join("\n"), title: question });
+    } catch {
+      /* user dismissed */
+    }
+  };
+
   const renderCard = (item: AskResponse["items"][number], idx: number, top: boolean) => (
     <Pressable
       key={`${item.rank}-${item.name}`}
@@ -84,6 +99,16 @@ export default function ResultsScreen() {
           <Ionicons name="arrow-back" size={22} color={colors.onSurface} />
         </Pressable>
         <Text style={styles.headerQ} numberOfLines={1}>{question}</Text>
+        {data && (
+          <Pressable
+            onPress={shareAnswer}
+            hitSlop={12}
+            testID="share-button"
+            style={styles.backBtn}
+          >
+            <Ionicons name="share-social" size={19} color={colors.onSurface} />
+          </Pressable>
+        )}
         <Pressable
           onPress={() => router.push("/(tabs)")}
           hitSlop={12}

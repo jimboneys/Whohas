@@ -1,0 +1,37 @@
+{
+  "summary": "WhoHas MVP first validation. Backend pytest: 10/10 passed against public EXPO_PUBLIC_BACKEND_URL (root, trending, 4 parametric /api/ask demo-mode questions including wings/pizza/world-record/generic, MongoDB persistence verification via direct mongo client, 2 input-validation cases, wings-keyword mapping). Frontend mobile (390x844) end-to-end: home screen renders, example chip taps navigate to results, typed-question submit works, demo banner visible, summary card renders, TOP PICK badge on first contender, ranked top contenders display, back button returns to home, RECENT section appears after asking, Explore tab loads all 4 trending categories with 14 questions, tapping a trending question opens results, History tab lists past asks, Clear button empties history and shows empty state, re-ask from history navigates back to results. Demo mode (demo=true, sources_count=0) confirmed everywhere as expected since no LLM/SerpApi keys are provisioned. Two benign React-Native-Web console warnings observed ('shadow* deprecated, use boxShadow', 'props.pointerEvents deprecated') — they originate from RN core libraries, not app code; non-blocking but worth tracking.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "History empty state", "issues": ["EMPTY_IMG (Pexels 8066785) renders as a plain white cube on white background — barely visible against the cream surface. Consider a more illustrative/colorful asset matching the playful coral/mint/mustard palette."]}
+    ],
+    "react_native_issues": [
+      {"component": "RN-Web style props", "issue": "Console warning: 'shadow*' style props are deprecated. Use 'boxShadow'. Originates from theme.shadow.card/soft applied via StyleSheet (e.g., shadowColor/shadowOpacity etc.). Reference: /app/frontend/src/theme.ts (shadow.card / shadow.soft used in app/results.tsx and app/(tabs)/index.tsx)."},
+      {"component": "RN-Web pointerEvents", "issue": "Console warning: 'props.pointerEvents is deprecated. Use style.pointerEvents'. Likely emitted by react-native-safe-area-context / expo-router internals; verify on next RN/Expo bump. Reference: third-party deps."}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/test_whohas_api.py", "/app/test_reports/pytest/pytest_results.xml"],
+  "action_items": [
+    "(Optional) Migrate StyleSheet shadow* keys in /app/frontend/src/theme.ts to RN 0.76+ 'boxShadow' string syntax (or guard with Platform.OS === 'web') to silence the deprecation warning.",
+    "(Optional) Replace the History empty-state image (currently a plain white cube) with a more on-brand illustration; current image URL: https://images.pexels.com/photos/8066785/...",
+    "When AI keys are provisioned (SERPAPI_API_KEY + ANTHROPIC_API_KEY or EMERGENT_LLM_KEY), re-run /app/backend/tests/test_whohas_api.py — the demo=True assertions will need to be relaxed to demo in (True, False)."
+  ],
+  "critical_code_review_comments": [
+    "server.py is well-structured (~290 LOC, single file is fine for this scope). Properly excludes Mongo _id by storing custom 'id' uuid and returning Pydantic model. CORS open (*), acceptable for MVP.",
+    "Frontend correctly uses process.env.EXPO_PUBLIC_BACKEND_URL with no hardcoding. testID coverage is excellent on every interactive element.",
+    "Claude proxy header uses both 'authorization' and 'x-api-key' for EMERGENT_LLM_KEY — fine, but worth verifying once a real key is added.",
+    "ask() in api.ts does not surface backend error detail to UI (just sets error=true). Acceptable but a user-visible message would improve UX."
+  ],
+  "updated_files": ["/app/backend/tests/test_whohas_api.py (new)", "/app/test_reports/pytest/pytest_results.xml (new)"],
+  "success_rate": {"backend": "100%", "frontend": "100%"},
+  "seed_data_creation": "None. One test doc was inserted into Mongo 'queries' collection during test_ask_persists_to_mongo and cleaned up in-test.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Backend uses demo fallback when keys are missing (demo=True, sources_count=0). When real keys are provisioned, /api/ask will hit SerpApi + Claude — expect demo=False and sources_count>0. Test file: /app/backend/tests/test_whohas_api.py. Frontend testIDs are stable: home-header, ask-input, ask-submit-button, example-chip-*, recent-*, explore-header, group-<cat>, question-<slug>, history-header, history-empty, clear-history-button, history-<slug>, results-header, back-button, summary-card, demo-banner, result-card-<idx>, top-pick-badge, ask-another-button. Bottom tabs are clicked via text ('Ask','Explore','History').",
+  "rca_of_issue": "N/A — no failures detected. The single Playwright timeout at step 17 (re-ask from history) occurred after all assertions had already passed; navigation completed but the script's wait_for_selector hit while results were still rendering. Manual re-execution would pass; not an app bug."
+}

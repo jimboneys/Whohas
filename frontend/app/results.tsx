@@ -84,6 +84,14 @@ export default function ResultsScreen() {
           <Ionicons name="arrow-back" size={22} color={colors.onSurface} />
         </Pressable>
         <Text style={styles.headerQ} numberOfLines={1}>{question}</Text>
+        <Pressable
+          onPress={() => router.push("/(tabs)")}
+          hitSlop={12}
+          testID="home-button"
+          style={styles.backBtn}
+        >
+          <Ionicons name="home" size={19} color={colors.onSurface} />
+        </Pressable>
       </View>
 
       {loading ? (

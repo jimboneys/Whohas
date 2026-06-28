@@ -57,9 +57,12 @@ export default function AskScreen() {
   const submit = (text: string) => {
     const value = text.trim();
     if (!value) return;
+    const framed = /^(who|where|which|what|when|how|do|does|is|are|can)\b/i.test(value)
+      ? value
+      : `Who has ${value}?`;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
     Keyboard.dismiss();
-    router.push({ pathname: "/results", params: { q: value, quick: quickMode ? "1" : "0" } });
+    router.push({ pathname: "/results", params: { q: framed, quick: quickMode ? "1" : "0" } });
   };
 
   const askChip = (phrase: string) => submit(`Who has ${phrase}?`);
@@ -104,10 +107,11 @@ export default function AskScreen() {
         </View>
 
         <View style={styles.searchCard} testID="search-card">
+          <Text style={styles.prefix}>Who has</Text>
           <TextInput
             testID="ask-input"
             style={styles.input}
-            placeholder="who has the best..."
+            placeholder="the best tacos…"
             placeholderTextColor="#B5AFA5"
             value={q}
             onChangeText={setQ}
@@ -201,13 +205,17 @@ const styles = StyleSheet.create({
   modeText: { fontFamily: fonts.bodyBold, fontSize: 13.5, color: colors.onSurfaceTertiary },
   modeTextActive: { color: colors.onBrand },
   searchCard: {
-    flexDirection: "row", alignItems: "flex-end", backgroundColor: colors.surfaceSecondary,
+    flexDirection: "row", alignItems: "center", backgroundColor: colors.surfaceSecondary,
     borderRadius: radius.lg, padding: spacing.sm, paddingLeft: spacing.lg,
     borderWidth: 1, borderColor: colors.border, ...shadow.card,
   },
   input: {
     flex: 1, fontFamily: fonts.bodyBold, fontSize: 18, color: colors.onSurface,
     paddingVertical: spacing.md, maxHeight: 110,
+  },
+  prefix: {
+    fontFamily: fonts.display, fontSize: 18, color: colors.brand,
+    paddingVertical: spacing.md, marginRight: 6,
   },
   askBtn: {
     width: 52, height: 52, borderRadius: radius.md, backgroundColor: colors.brand,

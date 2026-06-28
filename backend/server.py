@@ -227,6 +227,18 @@ KB = {
             "headphones": (["headphone", "earbuds", "airpods"], ["Amazon", "Best Buy", "the brand's official store"]),
             "console": (["ps5", "playstation", "xbox", "switch", "console"], ["Amazon", "Best Buy", "Walmart", "Target"]),
             "gas": (["gas", "fuel", "gasoline"], ["Costco Gas", "GasBuddy listings", "Sam's Club", "a local warehouse club"]),
+            "sneakers": (["sneaker", "sneakers", "shoes", "running shoes", "trainers"], ["Nike", "Foot Locker", "Amazon", "Finish Line"]),
+            "watch": (["smartwatch", "apple watch", "fitness tracker", "fitbit", "garmin"], ["Amazon", "Best Buy", "Target", "the brand store"]),
+            "tablet": (["tablet", "ipad"], ["Apple Store", "Amazon", "Best Buy", "Costco"]),
+            "camera": (["camera", "dslr", "mirrorless", "gopro"], ["B&H Photo", "Amazon", "Best Buy", "Adorama"]),
+            "speaker": (["speaker", "soundbar", "bluetooth speaker"], ["Amazon", "Best Buy", "Target", "Walmart"]),
+            "vacuum": (["vacuum", "roomba", "robot vacuum"], ["Amazon", "Best Buy", "Target", "Walmart"]),
+            "coffee maker": (["coffee maker", "espresso machine", "keurig", "nespresso"], ["Amazon", "Target", "Williams Sonoma", "Best Buy"]),
+            "grill": (["grill", "bbq grill", "smoker"], ["Home Depot", "Lowe's", "Amazon", "Walmart"]),
+            "bike": (["bike", "bicycle", "e-bike", "ebike"], ["Trek Store", "REI", "Amazon", "Walmart"]),
+            "monitor": (["monitor", "computer display"], ["Amazon", "Best Buy", "Newegg", "Costco"]),
+            "drone": (["drone", "quadcopter"], ["Amazon", "Best Buy", "B&H Photo", "DJI Store"]),
+            "mattress": (["mattress", "bed frame"], ["Amazon", "Casper", "Costco", "Mattress Firm"]),
         },
         "reason": "Usually stocks {subject} at competitive prices — worth comparing before you buy.",
         "summary": "Shopping for {subject}? These retailers typically have it in stock with good prices.",
@@ -326,7 +338,11 @@ def demo_answer(question: str) -> Dict[str, Any]:
 
 
 # ---------------- Product card (price comparison) ----------------
-SHOPPING_BASES = {"phone": 799, "laptop": 999, "tv": 599, "headphones": 299, "console": 449, "gas": 3.69}
+SHOPPING_BASES = {
+    "phone": 799, "laptop": 999, "tv": 599, "headphones": 299, "console": 449, "gas": 3.69,
+    "sneakers": 120, "watch": 249, "tablet": 449, "camera": 699, "speaker": 129, "vacuum": 299,
+    "coffee maker": 149, "grill": 349, "bike": 599, "monitor": 249, "drone": 499, "mattress": 799,
+}
 SHOPPING_IMAGES = {
     "phone": "https://images.unsplash.com/photo-1695048133142-1a20484d2569?crop=entropy&cs=srgb&fm=jpg&q=85&w=600",
     "laptop": "https://images.unsplash.com/photo-1517336714731-489689fd1ca8?crop=entropy&cs=srgb&fm=jpg&q=85&w=600",
@@ -334,6 +350,18 @@ SHOPPING_IMAGES = {
     "headphones": "https://images.unsplash.com/photo-1618366712010-f4ae9c647dcb?crop=entropy&cs=srgb&fm=jpg&q=85&w=600",
     "console": "https://images.unsplash.com/photo-1606144042614-b2417e99c4e3?crop=entropy&cs=srgb&fm=jpg&q=85&w=600",
     "gas": "https://images.unsplash.com/photo-1545262810-77515befe149?crop=entropy&cs=srgb&fm=jpg&q=85&w=600",
+    "sneakers": "https://images.unsplash.com/photo-1542291026-7eec264c27ff?crop=entropy&cs=srgb&fm=jpg&q=85&w=600",
+    "watch": "https://images.unsplash.com/photo-1523275335684-37898b6baf30?crop=entropy&cs=srgb&fm=jpg&q=85&w=600",
+    "tablet": "https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?crop=entropy&cs=srgb&fm=jpg&q=85&w=600",
+    "camera": "https://images.unsplash.com/photo-1502920917128-1aa500764cbd?crop=entropy&cs=srgb&fm=jpg&q=85&w=600",
+    "speaker": "https://images.unsplash.com/photo-1608043152269-423dbba4e7e1?crop=entropy&cs=srgb&fm=jpg&q=85&w=600",
+    "vacuum": "https://images.unsplash.com/photo-1558317374-067fb5f30001?crop=entropy&cs=srgb&fm=jpg&q=85&w=600",
+    "coffee maker": "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?crop=entropy&cs=srgb&fm=jpg&q=85&w=600",
+    "grill": "https://images.unsplash.com/photo-1555939594-58d7cb561ad1?crop=entropy&cs=srgb&fm=jpg&q=85&w=600",
+    "bike": "https://images.unsplash.com/photo-1485965120184-e220f721d03e?crop=entropy&cs=srgb&fm=jpg&q=85&w=600",
+    "monitor": "https://images.unsplash.com/photo-1527443224154-c4a3942d3acf?crop=entropy&cs=srgb&fm=jpg&q=85&w=600",
+    "drone": "https://images.unsplash.com/photo-1473968512647-3e447244af8f?crop=entropy&cs=srgb&fm=jpg&q=85&w=600",
+    "mattress": "https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?crop=entropy&cs=srgb&fm=jpg&q=85&w=600",
 }
 GENERIC_PRODUCT_IMG = "https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?crop=entropy&cs=srgb&fm=jpg&q=85&w=600"
 

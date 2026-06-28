@@ -392,8 +392,15 @@ def build_product(question: str) -> Optional[Dict[str, Any]]:
         stores.append({"store": store_names[i], "price": price})
 
     image = SHOPPING_IMAGES.get(topic, GENERIC_PRODUCT_IMG)
-    name = subject[:1].upper() + subject[1:]
-    return {"name": name[:48], "image": image, "stores": stores}
+    cleaned = re.sub(
+        r"\b(deals?|cheap(est)?|best|good|great|top|sale|online|today|for sale|prices?|discounts?|right now|near me|nearby)\b",
+        "", subject, flags=re.IGNORECASE)
+    cleaned = re.sub(r"\b(a|an|the)\b", "", cleaned, flags=re.IGNORECASE)
+    cleaned = re.sub(r"\s+", " ", cleaned).strip(" -")
+    if not cleaned:
+        cleaned = subject
+    name = " ".join(w.capitalize() for w in cleaned.split())
+    return {"name": name[:48] or "Product", "image": image, "stores": stores}
 
 
 # ---------------- Routes ----------------

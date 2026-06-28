@@ -151,6 +151,10 @@ export default function AskScreen() {
             ))}
           </>
         )}
+        <View style={styles.footer}>
+          <Ionicons name="sparkles" size={12} color="#C9C3B8" />
+          <Text style={styles.footerText}>Powered by Claude Sonnet 4.6</Text>
+        </View>
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -209,4 +213,9 @@ const styles = StyleSheet.create({
     padding: spacing.lg, marginBottom: spacing.sm, borderWidth: 1, borderColor: colors.border,
   },
   recentText: { flex: 1, fontFamily: fonts.bodyBold, fontSize: 15, color: colors.onSurface },
+  footer: {
+    flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6,
+    marginTop: spacing.xxxl, opacity: 0.8,
+  },
+  footerText: { fontFamily: fonts.bodyBold, fontSize: 12, color: "#A8A29A" },
 });

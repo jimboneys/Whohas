@@ -7,6 +7,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import * as WebBrowser from "expo-web-browser";
 import * as Haptics from "expo-haptics";
+import * as Clipboard from "expo-clipboard";
 
 import { colors, fonts, spacing, radius, shadow } from "@/src/theme";
 import { ask, AskResponse } from "@/src/api";
@@ -21,6 +22,7 @@ export default function ResultsScreen() {
   const [data, setData] = useState<AskResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   const load = useCallback(() => {
     if (!question) return;
@@ -42,6 +44,16 @@ export default function ResultsScreen() {
     WebBrowser.openBrowserAsync(url).catch(() => {});
   };
 
+  const copyAnswer = async () => {
+    if (!data) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    const answer = data.direct_answer || data.items[0]?.name || "";
+    const reason = data.items[0]?.reason || data.summary;
+    await Clipboard.setStringAsync(`${answer}\n\n${reason}`);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1600);
+  };
+
   const shareAnswer = async () => {
     if (!data) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
@@ -61,16 +73,6 @@ export default function ResultsScreen() {
           <Ionicons name="arrow-back" size={22} color={colors.onSurface} />
         </Pressable>
         <Text style={styles.headerQ} numberOfLines={1}>{question}</Text>
-        {data && (
-          <Pressable
-            onPress={shareAnswer}
-            hitSlop={12}
-            testID="share-button"
-            style={styles.backBtn}
-          >
-            <Ionicons name="share-social" size={19} color={colors.onSurface} />
-          </Pressable>
-        )}
         <Pressable
           onPress={() => router.push("/(tabs)")}
           hitSlop={12}
@@ -130,6 +132,17 @@ export default function ResultsScreen() {
 
           {data.summary ? <Text style={styles.summaryMini}>{data.summary}</Text> : null}
 
+          <View style={styles.actionsRow}>
+            <Pressable style={styles.actionBtn} testID="copy-button" onPress={copyAnswer}>
+              <Ionicons name={copied ? "checkmark-circle" : "copy-outline"} size={17} color={colors.brand} />
+              <Text style={styles.actionText}>{copied ? "Copied!" : "Copy"}</Text>
+            </Pressable>
+            <Pressable style={styles.actionBtn} testID="share-button" onPress={shareAnswer}>
+              <Ionicons name="share-social-outline" size={17} color={colors.brand} />
+              <Text style={styles.actionText}>Share</Text>
+            </Pressable>
+          </View>
+
           <Pressable style={styles.askAgain} onPress={() => router.push("/(tabs)")} testID="ask-another-button">
             <Ionicons name="search" size={18} color={colors.onBrand} />
             <Text style={styles.askAgainText}>Ask another</Text>
@@ -175,6 +188,13 @@ const styles = StyleSheet.create({
   },
   heroBtnText: { fontFamily: fonts.bodyExtra, fontSize: 15, color: colors.brand },
   summaryMini: { fontFamily: fonts.body, fontSize: 14, lineHeight: 21, color: colors.onSurfaceTertiary, marginTop: spacing.lg },
+  actionsRow: { flexDirection: "row", gap: spacing.md, marginTop: spacing.lg },
+  actionBtn: {
+    flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6,
+    backgroundColor: colors.surfaceSecondary, borderRadius: radius.md, paddingVertical: spacing.md,
+    borderWidth: 1.5, borderColor: colors.border,
+  },
+  actionText: { fontFamily: fonts.bodyBold, fontSize: 14, color: colors.brand },
   moreToggle: {
     flexDirection: "row", alignItems: "center", justifyContent: "center", gap: spacing.sm,
     borderRadius: radius.md, paddingVertical: spacing.md, marginTop: spacing.lg,

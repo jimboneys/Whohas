@@ -147,62 +147,183 @@ def claude_synthesize(question: str, results: List[Dict[str, Any]]) -> Optional[
         return None
 
 
-# ---------------- Demo fallback ----------------
-DEMO_MAP = {
-    ("wing", "wings"): ["Wingstop", "Buffalo Wild Wings", "A local sports bar & grill", "Hooters"],
-    ("pizza", "pizzas"): ["Domino's", "A local pizzeria", "Pizza Hut", "Papa John's"],
-    ("burger", "burgers"): ["Five Guys", "In-N-Out Burger", "Shake Shack", "A local diner"],
-    ("coffee", "espresso", "latte"): ["A local specialty roaster", "Starbucks", "Dunkin'", "Peet's Coffee"],
-    ("taco", "tacos"): ["A local taqueria", "Torchy's Tacos", "Taco Bell", "Chipotle"],
-    ("sushi",): ["A highly-rated local sushi bar", "A neighborhood omakase spot"],
-    ("gas", "fuel"): ["Costco Gas", "GasBuddy listings", "A local Sam's Club"],
-    ("record", "world record"): ["Guinness World Records", "The official sport's federation", "Wikipedia"],
-    ("discount", "discounts", "deal", "deals", "sale", "coupon"): [
-        "The retailer's official deals page", "RetailMeNot", "Slickdeals", "Honey browser extension"],
-    ("phone", "iphone", "android"): ["Amazon", "Best Buy", "The carrier's online store", "Walmart"],
-    ("flight", "flights"): ["Google Flights", "Skyscanner", "Kayak"],
-    ("hotel", "hotels"): ["Booking.com", "Hotels.com", "Expedia"],
-    ("ramen",): ["A top-rated local ramen-ya", "A nearby noodle bar"],
+# ---------------- Answer logic (offline knowledge engine) ----------------
+from urllib.parse import quote_plus
+
+
+def google_url(text: str) -> str:
+    return f"https://www.google.com/search?q={quote_plus(text)}"
+
+
+def maps_url(text: str) -> str:
+    return f"https://www.google.com/maps/search/{quote_plus(text)}"
+
+
+def yelp_url(text: str) -> str:
+    return f"https://www.yelp.com/search?find_desc={quote_plus(text)}"
+
+
+def wiki_url(text: str) -> str:
+    return f"https://en.wikipedia.org/w/index.php?search={quote_plus(text)}"
+
+# Knowledge base: topic synonyms -> (category, candidate holders).
+# Categories drive how reasons, summaries and source links are generated.
+KB = {
+    "food": {
+        "topics": {
+            "wings": (["wing", "wings"], ["Wingstop", "Buffalo Wild Wings", "Hooters", "a local sports bar & grill"]),
+            "pizza": (["pizza", "pizzas"], ["a top-rated local pizzeria", "Domino's", "Pizza Hut", "Papa John's"]),
+            "burgers": (["burger", "burgers"], ["Five Guys", "In-N-Out Burger", "Shake Shack", "a local diner"]),
+            "tacos": (["taco", "tacos"], ["a local taqueria", "Torchy's Tacos", "Chipotle", "Taco Bell"]),
+            "coffee": (["coffee", "espresso", "latte", "cappuccino"], ["a local specialty roaster", "Starbucks", "Blue Bottle", "Peet's Coffee"]),
+            "sushi": (["sushi", "sashimi", "omakase"], ["a highly-rated local sushi bar", "a neighborhood omakase spot", "Nobu"]),
+            "ramen": (["ramen", "noodle"], ["a top-rated local ramen-ya", "a nearby noodle bar"]),
+            "bbq": (["bbq", "barbecue", "brisket", "ribs"], ["a local BBQ joint", "a pitmaster spot with great reviews"]),
+            "steak": (["steak", "steakhouse"], ["a top local steakhouse", "Ruth's Chris", "a neighborhood grill"]),
+            "ice cream": (["ice cream", "gelato"], ["a local creamery", "a gelato shop", "Cold Stone Creamery"]),
+            "donuts": (["donut", "doughnut"], ["a local donut shop", "Krispy Kreme", "Dunkin'"]),
+            "brunch": (["brunch", "breakfast"], ["a popular local brunch spot", "a neighborhood diner"]),
+            "vegan": (["vegan", "plant-based", "vegetarian"], ["a dedicated vegan kitchen", "a plant-forward cafe"]),
+        },
+        "reason": "A go-to spot for {subject} — strong reviews, consistent quality{loc}.",
+        "summary": "Craving {subject}? These are popular picks{loc}. Tap any to see menus, reviews and locations.",
+        "link": "maps",
+        "source": "Maps & reviews",
+    },
+    "deals": {
+        "topics": {
+            "deals": (["discount", "discounts", "deal", "deals", "sale", "coupon", "promo", "cheap", "cheapest"],
+                      ["the retailer's official deals page", "RetailMeNot", "Slickdeals", "Honey", "Capital One Shopping"]),
+        },
+        "reason": "Regularly lists active offers and promo codes for {subject}.",
+        "summary": "Hunting for {subject}? Start with these — they aggregate the best current offers and coupons.",
+        "link": "google",
+        "source": "Deals search",
+    },
+    "records": {
+        "topics": {
+            "record": (["world record", "record", "fastest", "tallest", "largest", "most", "highest score", "grand slam"],
+                       ["Guinness World Records", "the official governing body / federation", "Wikipedia's records page"]),
+        },
+        "reason": "An authoritative source for verified {subject} holders.",
+        "summary": "For {subject}, these sources have the verified, up-to-date answer.",
+        "link": "wiki",
+        "source": "Reference",
+    },
+    "travel": {
+        "topics": {
+            "flights": (["flight", "flights", "airfare", "plane ticket"], ["Google Flights", "Skyscanner", "Kayak", "Hopper"]),
+            "hotels": (["hotel", "hotels", "stay", "airbnb", "resort"], ["Booking.com", "Hotels.com", "Expedia", "Airbnb"]),
+        },
+        "reason": "Compares prices across providers to find {subject}.",
+        "summary": "To find {subject}, these comparison tools scan many providers at once.",
+        "link": "google",
+        "source": "Price comparison",
+    },
+    "shopping": {
+        "topics": {
+            "phone": (["iphone", "phone", "android", "galaxy", "pixel"], ["Apple Store", "Amazon", "Best Buy", "the carrier store", "Walmart"]),
+            "laptop": (["laptop", "macbook", "notebook"], ["Apple Store", "Best Buy", "Amazon", "Costco"]),
+            "tv": (["tv", "television", "oled"], ["Best Buy", "Amazon", "Costco", "Walmart"]),
+            "headphones": (["headphone", "earbuds", "airpods"], ["Amazon", "Best Buy", "the brand's official store"]),
+            "console": (["ps5", "playstation", "xbox", "switch", "console"], ["Amazon", "Best Buy", "Walmart", "Target"]),
+            "gas": (["gas", "fuel", "gasoline"], ["Costco Gas", "GasBuddy listings", "Sam's Club", "a local warehouse club"]),
+        },
+        "reason": "Usually stocks {subject} at competitive prices — worth comparing before you buy.",
+        "summary": "Shopping for {subject}? These retailers typically have it in stock with good prices.",
+        "link": "google",
+        "source": "Retailers",
+    },
 }
 
 
 def strip_lead(q: str) -> str:
     s = q.strip().rstrip("?").strip()
-    for pat in [r"^who('s| has| has got| got| sells| serves| makes)\b",
-                r"^where (can i|do i|to)\b", r"^what place\b", r"^which (place|store|shop)\b"]:
+    for pat in [r"^who('s| has| has got| got| sells| serves| makes| offers| stocks)\b",
+                r"^where (can i|do i|to|can you)\b", r"^what place\b", r"^which (place|store|shop|brand)\b"]:
         s = re.sub(pat, "", s, flags=re.IGNORECASE).strip()
-    s = re.sub(r"^(the\s+)?(best|cheapest|top|good|nearest|closest)\b", "", s, flags=re.IGNORECASE).strip()
+    s = re.sub(r"^(the\s+)?(best|cheapest|top|good|nearest|closest|greatest)\b", "", s, flags=re.IGNORECASE).strip()
+    s = re.sub(r"\b(near me|nearby|around here|close to me)\b", "", s, flags=re.IGNORECASE).strip()
+    s = re.sub(r"\bin [A-Z][a-zA-Z]+(?: [A-Z][a-zA-Z]+)?\b", "", s).strip()
     return s or q.strip().rstrip("?")
 
 
-def google_url(text: str) -> str:
-    from urllib.parse import quote_plus
-    return f"https://www.google.com/search?q={quote_plus(text)}"
+def detect_location(question: str):
+    ql = question.lower()
+    if re.search(r"\b(near me|nearby|around here|close to me|near by)\b", ql):
+        return "near you", True
+    m = re.search(r"\bin ([A-Z][a-zA-Z]+(?: [A-Z][a-zA-Z]+)?)\b", question)
+    if m:
+        return f"in {m.group(1)}", True
+    return "", False
+
+
+def classify(question: str):
+    ql = question.lower()
+    # Priority order resolves overlaps: "cheapest flights" -> travel (not deals),
+    # "discounts on pizza" -> deals (not food), "cheapest iphone" -> shopping.
+    order = ["records", "travel", "shopping", "deals", "food"]
+    for category in order:
+        conf = KB[category]
+        for topic, (keys, names) in conf["topics"].items():
+            if any(k in ql for k in keys):
+                return category, conf, names
+    return None, None, None
+
+
+def make_link(kind: str, name: str, subject: str, loc: str) -> str:
+    q = f"{name} {subject} {loc}".strip()
+    if name.lower().startswith(("a ", "the ", "an ")):
+        q = f"{subject} {loc}".strip()  # generic placeholder -> search the subject
+    if kind == "maps":
+        return maps_url(q)
+    if kind == "wiki":
+        return wiki_url(f"{subject} record")
+    return google_url(q)
+
+
+def build_answer(question: str) -> Dict[str, Any]:
+    subject = strip_lead(question)
+    loc, is_local = detect_location(question)
+    loc_suffix = f" {loc}" if loc else ""
+    category, conf, names = classify(question)
+
+    if conf is None:
+        # Unknown topic: route to discovery sources for the raw subject.
+        items = [
+            {"name": f"Google Maps: {subject}", "reason": f"Nearby places that have {subject}, ranked by rating and distance.",
+             "url": maps_url(f"{subject} {loc}".strip()), "source_title": "Maps"},
+            {"name": f"Yelp: top-rated {subject}", "reason": f"The highest-rated options for {subject} with real reviews.",
+             "url": yelp_url(subject), "source_title": "Reviews"},
+            {"name": "Reddit recommendations", "reason": f"What real people recommend for who has {subject}.",
+             "url": google_url(f"who has {subject} reddit"), "source_title": "Community"},
+        ]
+        summary = f"Here's where to find who has {subject}{loc_suffix}."
+        for i, it in enumerate(items, 1):
+            it["rank"] = i
+        return {"summary": summary, "items": items}
+
+    # Known category: rank candidates and tailor reasons + links.
+    ranked = list(names)
+    if is_local:
+        # Prioritise local options for location-aware queries.
+        ranked.sort(key=lambda n: 0 if n.lower().startswith(("a ", "the ")) else 1)
+    items = []
+    for i, name in enumerate(ranked[:4], 1):
+        nice = name[0].upper() + name[1:] if name and name[0].islower() and not name.startswith(("a ", "the ", "an ")) else name
+        items.append({
+            "rank": i,
+            "name": nice,
+            "reason": conf["reason"].format(subject=subject, loc=loc_suffix),
+            "url": make_link(conf["link"], name, subject, loc),
+            "source_title": conf["source"],
+        })
+    summary = conf["summary"].format(subject=subject, loc=loc_suffix)
+    return {"summary": summary, "items": items}
 
 
 def demo_answer(question: str) -> Dict[str, Any]:
-    subject = strip_lead(question)
-    ql = question.lower()
-    names: List[str] = []
-    for keys, vals in DEMO_MAP.items():
-        if any(k in ql for k in keys):
-            names = vals
-            break
-    if not names:
-        names = [f"Top match for “{subject}”", "A popular community pick", "A nearby option"]
-    items = []
-    for i, name in enumerate(names[:4], 1):
-        items.append({
-            "rank": i,
-            "name": name,
-            "reason": ("Commonly recommended as a strong option for "
-                       f"“{subject}”. Tap to verify the latest details."),
-            "url": google_url(f"{name} {subject}"),
-            "source_title": "Web search",
-        })
-    summary = (f"Here are popular places that have {subject}. "
-               "These are demo suggestions — add API keys to get live, source-cited answers.")
-    return {"summary": summary, "items": items}
+    return build_answer(question)
 
 
 # ---------------- Routes ----------------
@@ -226,8 +347,14 @@ async def ask(payload: AskRequest):
     items = []
     valid_urls = {r["url"] for r in results}
     for it in synth.get("items", [])[:5]:
-        url = it.get("url", "")
-        if url not in valid_urls:
+        url = (it.get("url", "") or "").strip()
+        # When grounded by web results, enforce that urls come from those results.
+        # In knowledge/demo mode (no results), keep the engine-generated url and
+        # only backfill when the model returned an empty url.
+        if results:
+            if url not in valid_urls:
+                url = google_url(f"{it.get('name','')} {question}")
+        elif not url:
             url = google_url(f"{it.get('name','')} {question}")
         items.append(AnswerItem(
             rank=int(it.get("rank", len(items) + 1)),

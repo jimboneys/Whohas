@@ -11,6 +11,7 @@ import * as Haptics from "expo-haptics";
 import { colors, fonts, spacing, radius, shadow } from "@/src/theme";
 import { getHistory } from "@/src/history";
 import { suggest } from "@/src/api";
+import { storage } from "@/src/utils/storage";
 
 const EXAMPLES = [
   "the best wings",
@@ -26,12 +27,20 @@ export default function AskScreen() {
   const [q, setQ] = useState("");
   const [recent, setRecent] = useState<string[]>([]);
   const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [quickMode, setQuickMode] = useState(true);
 
   useFocusEffect(
     useCallback(() => {
       getHistory().then((h) => setRecent(h.slice(0, 4).map((x) => x.q)));
+      storage.getItem("whohas_quick", "1").then((v) => setQuickMode(v !== "0"));
     }, [])
   );
+
+  const setMode = (qm: boolean) => {
+    Haptics.selectionAsync().catch(() => {});
+    setQuickMode(qm);
+    storage.setItem("whohas_quick", qm ? "1" : "0");
+  };
 
   useEffect(() => {
     const v = q.trim();
@@ -50,7 +59,7 @@ export default function AskScreen() {
     if (!value) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
     Keyboard.dismiss();
-    router.push({ pathname: "/results", params: { q: value } });
+    router.push({ pathname: "/results", params: { q: value, quick: quickMode ? "1" : "0" } });
   };
 
   const askChip = (phrase: string) => submit(`Who has ${phrase}?`);
@@ -74,6 +83,25 @@ export default function AskScreen() {
           </Text>
         </View>
         <Text style={styles.tagline}>Ask anything. Find out who has it. 🔎</Text>
+
+        <View style={styles.modeRow} testID="mode-toggle">
+          <Pressable
+            testID="mode-quick"
+            style={[styles.modePill, quickMode && styles.modePillActive]}
+            onPress={() => setMode(true)}
+          >
+            <Ionicons name="flash" size={15} color={quickMode ? colors.onBrand : colors.onSurfaceTertiary} />
+            <Text style={[styles.modeText, quickMode && styles.modeTextActive]}>Quick answer</Text>
+          </Pressable>
+          <Pressable
+            testID="mode-detailed"
+            style={[styles.modePill, !quickMode && styles.modePillActive]}
+            onPress={() => setMode(false)}
+          >
+            <Ionicons name="list" size={15} color={!quickMode ? colors.onBrand : colors.onSurfaceTertiary} />
+            <Text style={[styles.modeText, !quickMode && styles.modeTextActive]}>Detailed</Text>
+          </Pressable>
+        </View>
 
         <View style={styles.searchCard} testID="search-card">
           <TextInput
@@ -160,7 +188,18 @@ const styles = StyleSheet.create({
     alignItems: "center", justifyContent: "center",
   },
   wordmark: { fontFamily: fonts.display, fontSize: 28, color: colors.onSurface },
-  tagline: { fontFamily: fonts.body, fontSize: 15, color: colors.onSurfaceTertiary, marginTop: spacing.xs, marginBottom: spacing.xl },
+  tagline: { fontFamily: fonts.body, fontSize: 15, color: colors.onSurfaceTertiary, marginTop: spacing.xs, marginBottom: spacing.lg },
+  modeRow: {
+    flexDirection: "row", gap: spacing.sm, backgroundColor: colors.surfaceTertiary,
+    borderRadius: radius.pill, padding: spacing.xs, marginBottom: spacing.lg,
+  },
+  modePill: {
+    flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6,
+    paddingVertical: spacing.md, borderRadius: radius.pill,
+  },
+  modePillActive: { backgroundColor: colors.brand },
+  modeText: { fontFamily: fonts.bodyBold, fontSize: 13.5, color: colors.onSurfaceTertiary },
+  modeTextActive: { color: colors.onBrand },
   searchCard: {
     flexDirection: "row", alignItems: "flex-end", backgroundColor: colors.surfaceSecondary,
     borderRadius: radius.lg, padding: spacing.sm, paddingLeft: spacing.lg,

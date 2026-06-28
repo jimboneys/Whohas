@@ -15,17 +15,20 @@ import { addHistory } from "@/src/history";
 export default function ResultsScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { q } = useLocalSearchParams<{ q: string }>();
+  const { q, quick } = useLocalSearchParams<{ q: string; quick: string }>();
   const question = (q || "").toString();
+  const isQuick = quick === "1";
 
   const [data, setData] = useState<AskResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const [showAll, setShowAll] = useState(false);
 
   const load = useCallback(() => {
     if (!question) return;
     setLoading(true);
     setError(false);
+    setShowAll(false);
     ask(question)
       .then((res) => {
         setData(res);
@@ -41,6 +44,38 @@ export default function ResultsScreen() {
     Haptics.selectionAsync().catch(() => {});
     WebBrowser.openBrowserAsync(url).catch(() => {});
   };
+
+  const renderCard = (item: AskResponse["items"][number], idx: number, top: boolean) => (
+    <Pressable
+      key={`${item.rank}-${item.name}`}
+      testID={`result-card-${idx}`}
+      onPress={() => openSource(item.url)}
+      style={[styles.card, top && styles.topCard]}
+    >
+      {top && (
+        <View style={styles.topBadge} testID="top-pick-badge">
+          <Ionicons name="trophy" size={12} color={colors.onSuccess} />
+          <Text style={styles.topBadgeText}>TOP PICK</Text>
+        </View>
+      )}
+      <View style={styles.cardRow}>
+        <View style={[styles.rankCircle, top && { backgroundColor: colors.success }]}>
+          <Text style={[styles.rankText, top && { color: colors.onSuccess }]}>{item.rank}</Text>
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.cardName}>{item.name}</Text>
+          <Text style={styles.cardReason}>{item.reason}</Text>
+          <View style={styles.sourceRow}>
+            <Ionicons name="link" size={13} color={colors.brand} />
+            <Text style={styles.sourceText} numberOfLines={1}>
+              {item.source_title || "View source"}
+            </Text>
+            <Ionicons name="open-outline" size={13} color={colors.onSurfaceTertiary} />
+          </View>
+        </View>
+      </View>
+    </Pressable>
+  );
 
   return (
     <View style={styles.flex}>
@@ -78,54 +113,64 @@ export default function ResultsScreen() {
             </View>
           )}
 
-          <View style={styles.summaryCard} testID="summary-card">
-            <View style={styles.summaryHead}>
-              <Ionicons name="sparkles" size={18} color={colors.brand} />
-              <Text style={styles.summaryLabel}>WHOHAS SAYS</Text>
-              {!data.demo && data.sources_count > 0 && (
-                <View style={styles.srcPill}>
-                  <Text style={styles.srcPillText}>{data.sources_count} sources</Text>
-                </View>
-              )}
-            </View>
-            <Text style={styles.summaryText}>{data.summary}</Text>
-          </View>
-
-          <Text style={styles.sectionLabel}>TOP CONTENDERS</Text>
-          {data.items.map((item, idx) => {
-            const top = idx === 0;
-            return (
-              <Pressable
-                key={`${item.rank}-${item.name}`}
-                testID={`result-card-${idx}`}
-                onPress={() => openSource(item.url)}
-                style={[styles.card, top && styles.topCard]}
-              >
-                {top && (
-                  <View style={styles.topBadge} testID="top-pick-badge">
-                    <Ionicons name="trophy" size={12} color={colors.onSuccess} />
-                    <Text style={styles.topBadgeText}>TOP PICK</Text>
-                  </View>
+          {isQuick ? (
+            <>
+              <View style={styles.heroCard} testID="quick-hero">
+                <Text style={styles.heroLabel}>QUICK ANSWER</Text>
+                <Text style={styles.heroName} testID="quick-answer-name">
+                  {data.direct_answer || data.items[0]?.name}
+                </Text>
+                {data.items[0] && (
+                  <Text style={styles.heroReason}>{data.items[0].reason}</Text>
                 )}
-                <View style={styles.cardRow}>
-                  <View style={[styles.rankCircle, top && { backgroundColor: colors.success }]}>
-                    <Text style={[styles.rankText, top && { color: colors.onSuccess }]}>{item.rank}</Text>
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.cardName}>{item.name}</Text>
-                    <Text style={styles.cardReason}>{item.reason}</Text>
-                    <View style={styles.sourceRow}>
-                      <Ionicons name="link" size={13} color={colors.brand} />
-                      <Text style={styles.sourceText} numberOfLines={1}>
-                        {item.source_title || "View source"}
-                      </Text>
-                      <Ionicons name="open-outline" size={13} color={colors.onSurfaceTertiary} />
+                {data.items[0] && (
+                  <Pressable
+                    style={styles.heroBtn}
+                    testID="quick-open-source"
+                    onPress={() => openSource(data.items[0].url)}
+                  >
+                    <Ionicons name="open-outline" size={18} color={colors.brand} />
+                    <Text style={styles.heroBtnText}>
+                      Open {data.items[0].source_title || "source"}
+                    </Text>
+                  </Pressable>
+                )}
+              </View>
+              <Text style={styles.summaryMini}>{data.summary}</Text>
+
+              {data.items.length > 1 && (
+                <Pressable
+                  style={styles.moreToggle}
+                  testID="quick-show-all"
+                  onPress={() => setShowAll((v) => !v)}
+                >
+                  <Text style={styles.moreToggleText}>
+                    {showAll ? "Hide other options" : `Show ${data.items.length - 1} more options`}
+                  </Text>
+                  <Ionicons name={showAll ? "chevron-up" : "chevron-down"} size={18} color={colors.brand} />
+                </Pressable>
+              )}
+              {showAll && data.items.slice(1).map((item, idx) => renderCard(item, idx + 1, false))}
+            </>
+          ) : (
+            <>
+              <View style={styles.summaryCard} testID="summary-card">
+                <View style={styles.summaryHead}>
+                  <Ionicons name="sparkles" size={18} color={colors.brand} />
+                  <Text style={styles.summaryLabel}>WHOHAS SAYS</Text>
+                  {!data.demo && data.sources_count > 0 && (
+                    <View style={styles.srcPill}>
+                      <Text style={styles.srcPillText}>{data.sources_count} sources</Text>
                     </View>
-                  </View>
+                  )}
                 </View>
-              </Pressable>
-            );
-          })}
+                <Text style={styles.summaryText}>{data.summary}</Text>
+              </View>
+
+              <Text style={styles.sectionLabel}>TOP CONTENDERS</Text>
+              {data.items.map((item, idx) => renderCard(item, idx, idx === 0))}
+            </>
+          )}
 
           <Pressable style={styles.askAgain} onPress={() => router.push("/(tabs)")} testID="ask-another-button">
             <Ionicons name="search" size={18} color={colors.onBrand} />
@@ -159,6 +204,25 @@ const styles = StyleSheet.create({
     backgroundColor: colors.warning, borderRadius: radius.md, padding: spacing.md, marginBottom: spacing.lg,
   },
   demoText: { flex: 1, fontFamily: fonts.bodyBold, fontSize: 12.5, color: colors.onWarning },
+  heroCard: {
+    backgroundColor: colors.brand, borderRadius: radius.lg, padding: spacing.xl, ...shadow.card,
+  },
+  heroLabel: { fontFamily: fonts.bodyExtra, fontSize: 11, letterSpacing: 1.5, color: "rgba(255,255,255,0.85)" },
+  heroName: { fontFamily: fonts.display, fontSize: 30, lineHeight: 36, color: colors.onBrand, marginTop: spacing.xs },
+  heroReason: { fontFamily: fonts.body, fontSize: 14.5, lineHeight: 21, color: "rgba(255,255,255,0.92)", marginTop: spacing.sm },
+  heroBtn: {
+    flexDirection: "row", alignItems: "center", justifyContent: "center", gap: spacing.sm,
+    backgroundColor: colors.surfaceSecondary, borderRadius: radius.pill,
+    paddingVertical: spacing.md, marginTop: spacing.lg,
+  },
+  heroBtnText: { fontFamily: fonts.bodyExtra, fontSize: 15, color: colors.brand },
+  summaryMini: { fontFamily: fonts.body, fontSize: 14, lineHeight: 21, color: colors.onSurfaceTertiary, marginTop: spacing.lg },
+  moreToggle: {
+    flexDirection: "row", alignItems: "center", justifyContent: "center", gap: spacing.sm,
+    borderRadius: radius.md, paddingVertical: spacing.md, marginTop: spacing.lg,
+    borderWidth: 1.5, borderColor: colors.border, backgroundColor: colors.surfaceSecondary,
+  },
+  moreToggleText: { fontFamily: fonts.bodyBold, fontSize: 14, color: colors.brand },
   summaryCard: {
     backgroundColor: colors.surfaceInverse, borderRadius: radius.lg, padding: spacing.lg, ...shadow.card,
   },

@@ -12,6 +12,7 @@ export type AskResponse = {
   id: string;
   question: string;
   summary: string;
+  direct_answer: string;
   items: AnswerItem[];
   demo: boolean;
   sources_count: number;

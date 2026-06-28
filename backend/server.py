@@ -51,6 +51,7 @@ class AskResponse(BaseModel):
     id: str
     question: str
     summary: str
+    direct_answer: str = ""
     items: List[AnswerItem]
     demo: bool
     sources_count: int
@@ -372,6 +373,7 @@ async def ask(payload: AskRequest):
     })
     return AskResponse(
         id=qid, question=question, summary=synth.get("summary", ""),
+        direct_answer=(items[0].name if items else ""),
         items=items, demo=demo, sources_count=len(results), created_at=now,
     )
 

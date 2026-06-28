@@ -15,20 +15,17 @@ import { addHistory } from "@/src/history";
 export default function ResultsScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { q, quick } = useLocalSearchParams<{ q: string; quick: string }>();
+  const { q } = useLocalSearchParams<{ q: string }>();
   const question = (q || "").toString();
-  const isQuick = quick === "1";
 
   const [data, setData] = useState<AskResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
-  const [showAll, setShowAll] = useState(false);
 
   const load = useCallback(() => {
     if (!question) return;
     setLoading(true);
     setError(false);
-    setShowAll(false);
     ask(question)
       .then((res) => {
         setData(res);
@@ -48,49 +45,14 @@ export default function ResultsScreen() {
   const shareAnswer = async () => {
     if (!data) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
-    const lines = [`🔎 ${question}`, "", data.summary, ""];
-    data.items.slice(0, 3).forEach((it) => {
-      lines.push(`${it.rank === 1 ? "🏆" : `${it.rank}.`} ${it.name}`);
-    });
-    lines.push("", "Found with WhoHas");
+    const answer = data.direct_answer || data.items[0]?.name || "";
+    const lines = [`🔎 ${question}`, "", `✅ ${answer}`, "", data.summary, "", "Found with WhoHas"];
     try {
       await Share.share({ message: lines.join("\n"), title: question });
     } catch {
       /* user dismissed */
     }
   };
-
-  const renderCard = (item: AskResponse["items"][number], idx: number, top: boolean) => (
-    <Pressable
-      key={`${item.rank}-${item.name}`}
-      testID={`result-card-${idx}`}
-      onPress={() => openSource(item.url)}
-      style={[styles.card, top && styles.topCard]}
-    >
-      {top && (
-        <View style={styles.topBadge} testID="top-pick-badge">
-          <Ionicons name="trophy" size={12} color={colors.onSuccess} />
-          <Text style={styles.topBadgeText}>TOP PICK</Text>
-        </View>
-      )}
-      <View style={styles.cardRow}>
-        <View style={[styles.rankCircle, top && { backgroundColor: colors.success }]}>
-          <Text style={[styles.rankText, top && { color: colors.onSuccess }]}>{item.rank}</Text>
-        </View>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.cardName}>{item.name}</Text>
-          <Text style={styles.cardReason}>{item.reason}</Text>
-          <View style={styles.sourceRow}>
-            <Ionicons name="link" size={13} color={colors.brand} />
-            <Text style={styles.sourceText} numberOfLines={1}>
-              {item.source_title || "View source"}
-            </Text>
-            <Ionicons name="open-outline" size={13} color={colors.onSurfaceTertiary} />
-          </View>
-        </View>
-      </View>
-    </Pressable>
-  );
 
   return (
     <View style={styles.flex}>
@@ -141,69 +103,32 @@ export default function ResultsScreen() {
             <View style={styles.demoBanner} testID="demo-banner">
               <Ionicons name="information-circle" size={18} color={colors.onWarning} />
               <Text style={styles.demoText}>
-                Demo answers. Add an AI key in the backend to get live, source-cited results.
+                Smart answer. Add universal-key balance for live, source-cited results.
               </Text>
             </View>
           )}
 
-          {isQuick ? (
-            <>
-              <View style={styles.heroCard} testID="quick-hero">
-                <Text style={styles.heroLabel}>QUICK ANSWER</Text>
-                <Text style={styles.heroName} testID="quick-answer-name">
-                  {data.direct_answer || data.items[0]?.name}
-                </Text>
-                {data.items[0] && (
-                  <Text style={styles.heroReason}>{data.items[0].reason}</Text>
-                )}
-                {data.items[0] && (
-                  <Pressable
-                    style={styles.heroBtn}
-                    testID="quick-open-source"
-                    onPress={() => openSource(data.items[0].url)}
-                  >
-                    <Ionicons name="open-outline" size={18} color={colors.brand} />
-                    <Text style={styles.heroBtnText}>
-                      Open {data.items[0].source_title || "source"}
-                    </Text>
-                  </Pressable>
-                )}
-              </View>
-              <Text style={styles.summaryMini}>{data.summary}</Text>
+          <View style={styles.heroCard} testID="answer-card">
+            <Text style={styles.heroLabel}>HERE&apos;S WHO HAS IT</Text>
+            <Text style={styles.heroName} testID="answer-name">
+              {data.direct_answer || data.items[0]?.name}
+            </Text>
+            {data.items[0]?.reason ? (
+              <Text style={styles.heroReason}>{data.items[0].reason}</Text>
+            ) : null}
+            {data.items[0]?.url ? (
+              <Pressable
+                style={styles.heroBtn}
+                testID="find-it-button"
+                onPress={() => openSource(data.items[0].url)}
+              >
+                <Ionicons name="navigate" size={18} color={colors.brand} />
+                <Text style={styles.heroBtnText}>Find it</Text>
+              </Pressable>
+            ) : null}
+          </View>
 
-              {data.items.length > 1 && (
-                <Pressable
-                  style={styles.moreToggle}
-                  testID="quick-show-all"
-                  onPress={() => setShowAll((v) => !v)}
-                >
-                  <Text style={styles.moreToggleText}>
-                    {showAll ? "Hide other options" : `Show ${data.items.length - 1} more options`}
-                  </Text>
-                  <Ionicons name={showAll ? "chevron-up" : "chevron-down"} size={18} color={colors.brand} />
-                </Pressable>
-              )}
-              {showAll && data.items.slice(1).map((item, idx) => renderCard(item, idx + 1, false))}
-            </>
-          ) : (
-            <>
-              <View style={styles.summaryCard} testID="summary-card">
-                <View style={styles.summaryHead}>
-                  <Ionicons name="sparkles" size={18} color={colors.brand} />
-                  <Text style={styles.summaryLabel}>WHOHAS SAYS</Text>
-                  {!data.demo && data.sources_count > 0 && (
-                    <View style={styles.srcPill}>
-                      <Text style={styles.srcPillText}>{data.sources_count} sources</Text>
-                    </View>
-                  )}
-                </View>
-                <Text style={styles.summaryText}>{data.summary}</Text>
-              </View>
-
-              <Text style={styles.sectionLabel}>TOP CONTENDERS</Text>
-              {data.items.map((item, idx) => renderCard(item, idx, idx === 0))}
-            </>
-          )}
+          {data.summary ? <Text style={styles.summaryMini}>{data.summary}</Text> : null}
 
           <Pressable style={styles.askAgain} onPress={() => router.push("/(tabs)")} testID="ask-another-button">
             <Ionicons name="search" size={18} color={colors.onBrand} />

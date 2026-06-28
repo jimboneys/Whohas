@@ -11,7 +11,6 @@ import * as Haptics from "expo-haptics";
 import { colors, fonts, spacing, radius, shadow } from "@/src/theme";
 import { getHistory } from "@/src/history";
 import { suggest } from "@/src/api";
-import { storage } from "@/src/utils/storage";
 
 const EXAMPLES = [
   "the best wings",
@@ -27,20 +26,12 @@ export default function AskScreen() {
   const [q, setQ] = useState("");
   const [recent, setRecent] = useState<string[]>([]);
   const [suggestions, setSuggestions] = useState<string[]>([]);
-  const [quickMode, setQuickMode] = useState(true);
 
   useFocusEffect(
     useCallback(() => {
       getHistory().then((h) => setRecent(h.slice(0, 4).map((x) => x.q)));
-      storage.getItem("whohas_quick", "1").then((v) => setQuickMode(v !== "0"));
     }, [])
   );
-
-  const setMode = (qm: boolean) => {
-    Haptics.selectionAsync().catch(() => {});
-    setQuickMode(qm);
-    storage.setItem("whohas_quick", qm ? "1" : "0");
-  };
 
   useEffect(() => {
     const v = q.trim();
@@ -62,7 +53,7 @@ export default function AskScreen() {
       : `Who has ${value}?`;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
     Keyboard.dismiss();
-    router.push({ pathname: "/results", params: { q: framed, quick: quickMode ? "1" : "0" } });
+    router.push({ pathname: "/results", params: { q: framed } });
   };
 
   const askChip = (phrase: string) => submit(`Who has ${phrase}?`);
@@ -86,25 +77,6 @@ export default function AskScreen() {
           </Text>
         </View>
         <Text style={styles.tagline}>Ask anything. Find out who has it. 🔎</Text>
-
-        <View style={styles.modeRow} testID="mode-toggle">
-          <Pressable
-            testID="mode-quick"
-            style={[styles.modePill, quickMode && styles.modePillActive]}
-            onPress={() => setMode(true)}
-          >
-            <Ionicons name="flash" size={15} color={quickMode ? colors.onBrand : colors.onSurfaceTertiary} />
-            <Text style={[styles.modeText, quickMode && styles.modeTextActive]}>Quick answer</Text>
-          </Pressable>
-          <Pressable
-            testID="mode-detailed"
-            style={[styles.modePill, !quickMode && styles.modePillActive]}
-            onPress={() => setMode(false)}
-          >
-            <Ionicons name="list" size={15} color={!quickMode ? colors.onBrand : colors.onSurfaceTertiary} />
-            <Text style={[styles.modeText, !quickMode && styles.modeTextActive]}>Detailed</Text>
-          </Pressable>
-        </View>
 
         <View style={styles.searchCard} testID="search-card">
           <Text style={styles.prefix}>Who has</Text>

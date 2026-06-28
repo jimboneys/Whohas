@@ -7,6 +7,7 @@ import re
 import json
 import logging
 import uuid
+import hashlib
 from pathlib import Path
 from datetime import datetime, timezone
 from typing import List, Optional, Dict, Any
@@ -47,12 +48,24 @@ class AnswerItem(BaseModel):
     source_title: Optional[str] = None
 
 
+class StorePrice(BaseModel):
+    store: str
+    price: float
+
+
+class ProductCard(BaseModel):
+    name: str
+    image: str
+    stores: List[StorePrice]
+
+
 class AskResponse(BaseModel):
     id: str
     question: str
     summary: str
     direct_answer: str = ""
     items: List[AnswerItem]
+    product: Optional[ProductCard] = None
     demo: bool
     sources_count: int
     created_at: str
@@ -312,6 +325,49 @@ def demo_answer(question: str) -> Dict[str, Any]:
     return build_answer(question)
 
 
+# ---------------- Product card (price comparison) ----------------
+SHOPPING_BASES = {"phone": 799, "laptop": 999, "tv": 599, "headphones": 299, "console": 449, "gas": 3.69}
+SHOPPING_IMAGES = {
+    "phone": "https://images.unsplash.com/photo-1695048133142-1a20484d2569?crop=entropy&cs=srgb&fm=jpg&q=85&w=600",
+    "laptop": "https://images.unsplash.com/photo-1517336714731-489689fd1ca8?crop=entropy&cs=srgb&fm=jpg&q=85&w=600",
+    "tv": "https://images.unsplash.com/photo-1593359677879-a4bb92f829d1?crop=entropy&cs=srgb&fm=jpg&q=85&w=600",
+    "headphones": "https://images.unsplash.com/photo-1618366712010-f4ae9c647dcb?crop=entropy&cs=srgb&fm=jpg&q=85&w=600",
+    "console": "https://images.unsplash.com/photo-1606144042614-b2417e99c4e3?crop=entropy&cs=srgb&fm=jpg&q=85&w=600",
+    "gas": "https://images.unsplash.com/photo-1545262810-77515befe149?crop=entropy&cs=srgb&fm=jpg&q=85&w=600",
+}
+GENERIC_PRODUCT_IMG = "https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?crop=entropy&cs=srgb&fm=jpg&q=85&w=600"
+
+
+def build_product(question: str) -> Optional[Dict[str, Any]]:
+    category, conf, names = classify(question)
+    if category != "shopping":
+        return None
+    ql = question.lower()
+    topic = None
+    for t, (keys, _nm) in KB["shopping"]["topics"].items():
+        if any(k in ql for k in keys):
+            topic = t
+            break
+    base = SHOPPING_BASES.get(topic, 59)
+    subject = strip_lead(question) or "Product"
+
+    store_names = [n for n in names if not n.lower().startswith(("a ", "the ", "an "))]
+    store_names = (store_names + ["Amazon", "Walmart", "Best Buy"])[:3]
+
+    h = int(hashlib.md5(question.lower().encode()).hexdigest(), 16)
+    factors = [0.93, 1.0, 1.08]
+    rot = h % 3
+    stores = []
+    for i in range(3):
+        raw = base * factors[(i + rot) % 3]
+        price = round(raw) - 0.01 if base >= 10 else round(raw, 2)
+        stores.append({"store": store_names[i], "price": price})
+
+    image = SHOPPING_IMAGES.get(topic, GENERIC_PRODUCT_IMG)
+    name = subject[:1].upper() + subject[1:]
+    return {"name": name[:48], "image": image, "stores": stores}
+
+
 # ---------------- Routes ----------------
 @api_router.get("/")
 async def root():
@@ -352,6 +408,7 @@ async def ask(payload: AskRequest):
 
     now = datetime.now(timezone.utc).isoformat()
     qid = str(uuid.uuid4())
+    product = build_product(question)
     await db.queries.insert_one({
         "id": qid, "question": question, "summary": synth.get("summary", ""),
         "demo": demo, "sources_count": len(results), "created_at": now,
@@ -359,7 +416,7 @@ async def ask(payload: AskRequest):
     return AskResponse(
         id=qid, question=question, summary=synth.get("summary", ""),
         direct_answer=(items[0].name if items else ""),
-        items=items, demo=demo, sources_count=len(results), created_at=now,
+        items=items, product=product, demo=demo, sources_count=len(results), created_at=now,
     )
 
 

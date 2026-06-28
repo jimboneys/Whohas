@@ -8,12 +8,16 @@ export type AnswerItem = {
   source_title?: string | null;
 };
 
+export type StorePrice = { store: string; price: number };
+export type ProductCard = { name: string; image: string; stores: StorePrice[] };
+
 export type AskResponse = {
   id: string;
   question: string;
   summary: string;
   direct_answer: string;
   items: AnswerItem[];
+  product?: ProductCard | null;
   demo: boolean;
   sources_count: number;
   created_at: string;

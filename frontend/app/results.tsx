@@ -12,6 +12,7 @@ import * as Clipboard from "expo-clipboard";
 import { colors, fonts, spacing, radius, shadow } from "@/src/theme";
 import { ask, AskResponse } from "@/src/api";
 import { addHistory } from "@/src/history";
+import ProductResult from "@/src/components/ProductResult";
 
 export default function ResultsScreen() {
   const insets = useSafeAreaInsets();
@@ -109,6 +110,8 @@ export default function ResultsScreen() {
               </Text>
             </View>
           )}
+
+          {data.product ? <ProductResult product={data.product} /> : null}
 
           <View style={styles.heroCard} testID="answer-card">
             <Text style={styles.heroLabel}>HERE&apos;S WHO HAS IT</Text>

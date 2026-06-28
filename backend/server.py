@@ -24,7 +24,7 @@ db = client[os.environ['DB_NAME']]
 SERPAPI_API_KEY = os.environ.get("SERPAPI_API_KEY", "").strip()
 ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "").strip()
 EMERGENT_LLM_KEY = os.environ.get("EMERGENT_LLM_KEY", "").strip()
-CLAUDE_MODEL = os.environ.get("CLAUDE_MODEL", "claude-sonnet-4-6-20260218").strip()
+CLAUDE_MODEL = os.environ.get("CLAUDE_MODEL", "claude-sonnet-4-6").strip()
 
 logging.basicConfig(level=logging.INFO,
                     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -99,8 +99,9 @@ SYSTEM_PROMPT = (
 )
 
 
-def claude_synthesize(question: str, results: List[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
-    if not (EMERGENT_LLM_KEY or ANTHROPIC_API_KEY):
+async def claude_synthesize(question: str, results: List[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
+    api_key = EMERGENT_LLM_KEY or ANTHROPIC_API_KEY
+    if not api_key:
         return None
     if results:
         lines = [f"User question: {question}", "", "Search results:"]
@@ -113,32 +114,15 @@ def claude_synthesize(question: str, results: List[Dict[str, Any]]) -> Optional[
                  "Leave each url as an empty string \"\"."]
     user_prompt = "\n".join(lines)
 
-    headers = {"content-type": "application/json", "anthropic-version": "2023-06-01"}
-    base_url = "https://api.anthropic.com/v1/messages"
-
-    # Prefer Emergent universal key via proxy when present, else direct Anthropic key.
-    if EMERGENT_LLM_KEY:
-        proxy = os.environ.get("INTEGRATION_PROXY_URL", "https://integrations.emergentagent.com").rstrip("/")
-        base_url = f"{proxy}/llm/anthropic/v1/messages"
-        headers["authorization"] = f"Bearer {EMERGENT_LLM_KEY}"
-        headers["x-api-key"] = EMERGENT_LLM_KEY
-    elif ANTHROPIC_API_KEY:
-        headers["x-api-key"] = ANTHROPIC_API_KEY
-    else:
-        return None
-
-    payload = {
-        "model": CLAUDE_MODEL,
-        "max_tokens": 900,
-        "temperature": 0.2,
-        "system": SYSTEM_PROMPT,
-        "messages": [{"role": "user", "content": user_prompt}],
-    }
     try:
-        resp = requests.post(base_url, headers=headers, json=payload, timeout=40)
-        resp.raise_for_status()
-        data = resp.json()
-        text = "".join(b.get("text", "") for b in data.get("content", []))
+        from emergentintegrations.llm.chat import LlmChat, UserMessage
+        chat = LlmChat(
+            api_key=api_key,
+            session_id=str(uuid.uuid4()),
+            system_message=SYSTEM_PROMPT,
+        ).with_model("anthropic", CLAUDE_MODEL)
+        resp = await chat.send_message(UserMessage(text=user_prompt))
+        text = resp if isinstance(resp, str) else getattr(resp, "content", str(resp))
         text = text.strip()
         if text.startswith("```"):
             text = re.sub(r"^```(json)?|```$", "", text).strip()
@@ -340,7 +324,7 @@ async def ask(payload: AskRequest):
         raise HTTPException(status_code=400, detail="Question is required")
 
     results = web_search(question)
-    synth = claude_synthesize(question, results)
+    synth = await claude_synthesize(question, results)
     demo = synth is None
     if demo:
         synth = demo_answer(question)

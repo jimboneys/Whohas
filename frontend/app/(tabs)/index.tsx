@@ -151,6 +151,10 @@ export default function AskScreen() {
             ))}
           </>
         )}
+        <View style={styles.footer}>
+          <Ionicons name="sparkles" size={12} color="#C9C3B8" />
+          <Text style={styles.footerText}>Powered by Claude Sonnet 4.6</Text>
+        </View>
       </ScrollView>
     </KeyboardAvoidingView>
   );

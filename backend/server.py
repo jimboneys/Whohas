@@ -531,6 +531,11 @@ app.add_middleware(
 )
 
 
+@app.get("/")
+async def health():
+    return {"status": "ok", "service": "WhoHas API"}
+
+
 @app.on_event("startup")
 async def startup():
     live = bool(SERPAPI_API_KEY and (ANTHROPIC_API_KEY or EMERGENT_LLM_KEY))

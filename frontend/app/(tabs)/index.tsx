@@ -13,11 +13,11 @@ import { getHistory } from "@/src/history";
 import { suggest } from "@/src/api";
 
 const EXAMPLES = [
-  "the best wings",
-  "discounts on pizza",
-  "the world record for fastest mile",
-  "the cheapest iPhone",
-  "the best tacos near me",
+  "the cheapest eggs",
+  "paper towels on sale",
+  "the lowest milk price",
+  "cheap laundry detergent",
+  "diapers in bulk",
 ];
 
 export default function AskScreen() {

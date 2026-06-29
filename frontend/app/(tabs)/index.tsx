@@ -76,7 +76,7 @@ export default function AskScreen() {
             Who<Text style={{ color: colors.brand }}>Has</Text>
           </Text>
         </View>
-        <Text style={styles.tagline}>Ask anything. Find out who has it. 🔎</Text>
+        <Text style={styles.tagline}>Hey 👋 what are you looking for today?</Text>
 
         <View style={styles.searchCard} testID="search-card">
           <Text style={styles.prefix}>Who has</Text>
@@ -151,10 +151,6 @@ export default function AskScreen() {
             ))}
           </>
         )}
-        <View style={styles.footer}>
-          <Ionicons name="sparkles" size={12} color="#C9C3B8" />
-          <Text style={styles.footerText}>Powered by Claude Sonnet 4.6</Text>
-        </View>
       </ScrollView>
     </KeyboardAvoidingView>
   );

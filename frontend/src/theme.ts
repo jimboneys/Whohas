@@ -24,9 +24,9 @@ export const colors = {
 export const fonts = {
   display: "Fredoka_600",
   displayMedium: "Fredoka_500",
-  body: "Nunito_400",
-  bodyBold: "Nunito_700",
-  bodyExtra: "Nunito_800",
+  body: "Quicksand_500",
+  bodyBold: "Quicksand_600",
+  bodyExtra: "Quicksand_700",
 };
 
 export const spacing = {

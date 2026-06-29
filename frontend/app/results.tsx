@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import {
   View, Text, StyleSheet, ScrollView, Pressable, ActivityIndicator, RefreshControl, Share,
 } from "react-native";
@@ -24,8 +24,9 @@ export default function ResultsScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [copied, setCopied] = useState(false);
+  const autoOpenedRef = useRef(false);
 
-  const load = useCallback(() => {
+  const load = useCallback((auto: boolean = true) => {
     if (!question) return;
     setLoading(true);
     setError(false);
@@ -33,12 +34,20 @@ export default function ResultsScreen() {
       .then((res) => {
         setData(res);
         addHistory(question);
+        if (auto && !autoOpenedRef.current && res.items[0]?.url) {
+          autoOpenedRef.current = true;
+          setTimeout(() => {
+            WebBrowser.openBrowserAsync(res.items[0].url).catch(() => {});
+          }, 800);
+        }
       })
       .catch(() => setError(true))
       .finally(() => setLoading(false));
   }, [question]);
 
-  useEffect(load, [load]);
+  useEffect(() => {
+    load(true);
+  }, [load]);
 
   const openSource = (url: string) => {
     Haptics.selectionAsync().catch(() => {});
@@ -92,7 +101,7 @@ export default function ResultsScreen() {
       ) : error ? (
         <View style={styles.center}>
           <Text style={styles.errText}>Something went wrong.</Text>
-          <Pressable style={styles.retry} onPress={load} testID="results-retry">
+          <Pressable style={styles.retry} onPress={() => load(false)} testID="results-retry">
             <Text style={styles.retryText}>Try again</Text>
           </Pressable>
         </View>
@@ -100,7 +109,7 @@ export default function ResultsScreen() {
         <ScrollView
           contentContainerStyle={{ padding: spacing.xl, paddingBottom: spacing.xxxl }}
           showsVerticalScrollIndicator={false}
-          refreshControl={<RefreshControl refreshing={false} onRefresh={load} tintColor={colors.brand} />}
+          refreshControl={<RefreshControl refreshing={false} onRefresh={() => load(false)} tintColor={colors.brand} />}
         >
           {data.demo && (
             <View style={styles.demoBanner} testID="demo-banner">
@@ -114,7 +123,7 @@ export default function ResultsScreen() {
           {data.product ? <ProductResult product={data.product} /> : null}
 
           <View style={styles.heroCard} testID="answer-card">
-            <Text style={styles.heroLabel}>HERE&apos;S WHO HAS IT</Text>
+            <Text style={styles.heroLabel}>FOUND IT FOR YOU 🎉</Text>
             <Text style={styles.heroName} testID="answer-name">
               {data.direct_answer || data.items[0]?.name}
             </Text>
@@ -134,6 +143,11 @@ export default function ResultsScreen() {
           </View>
 
           {data.summary ? <Text style={styles.summaryMini}>{data.summary}</Text> : null}
+
+          <View style={styles.openedNote} testID="opened-note">
+            <Ionicons name="open-outline" size={14} color={colors.onSurfaceTertiary} />
+            <Text style={styles.openedNoteText}>Opened the top spot for you · tap Find it to reopen</Text>
+          </View>
 
           <View style={styles.actionsRow}>
             <Pressable style={styles.actionBtn} testID="copy-button" onPress={copyAnswer}>
@@ -191,6 +205,8 @@ const styles = StyleSheet.create({
   },
   heroBtnText: { fontFamily: fonts.bodyExtra, fontSize: 15, color: colors.brand },
   summaryMini: { fontFamily: fonts.body, fontSize: 14, lineHeight: 21, color: colors.onSurfaceTertiary, marginTop: spacing.lg },
+  openedNote: { flexDirection: "row", alignItems: "center", gap: 6, marginTop: spacing.md },
+  openedNoteText: { flex: 1, fontFamily: fonts.body, fontSize: 12.5, color: colors.onSurfaceTertiary },
   actionsRow: { flexDirection: "row", gap: spacing.md, marginTop: spacing.lg },
   actionBtn: {
     flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6,

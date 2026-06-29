@@ -21,6 +21,9 @@ export default function RootLayout() {
     Nunito_400: require("../assets/fonts/Nunito-Regular.ttf"),
     Nunito_700: require("../assets/fonts/Nunito-Bold.ttf"),
     Nunito_800: require("../assets/fonts/Nunito-ExtraBold.ttf"),
+    Quicksand_500: require("../assets/fonts/Quicksand-Medium.ttf"),
+    Quicksand_600: require("../assets/fonts/Quicksand-SemiBold.ttf"),
+    Quicksand_700: require("../assets/fonts/Quicksand-Bold.ttf"),
   });
 
   const ready = (iconsLoaded || iconsError) && (fontsLoaded || fontsError);

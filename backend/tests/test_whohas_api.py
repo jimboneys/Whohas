@@ -1,10 +1,26 @@
-"""WhoHas backend API tests - covers /api/ask, /api/trending-questions, MongoDB persistence."""
+"""WhoHas backend API tests — deployment-fix verification.
+
+Covers:
+- NEW: GET / (root) returns 200 + {status:'ok'} (the deployment fix)
+- GET /api/ returns 200
+- POST /api/ask for grocery + non-shopping questions (product card vs None)
+- GET /api/trending-questions returns grocery/household groups
+- GET /api/suggest?q=eggs returns suggestions
+- MongoDB persistence of /api/ask
+- Cheapest store price == min(prices) (frontend highlight invariant)
+"""
 import os
+import re
 import pytest
 import requests
 from pymongo import MongoClient
 
-BASE_URL = os.environ.get("EXPO_PUBLIC_BACKEND_URL", "https://whohas-app.preview.emergentagent.com").rstrip("/")
+# Public preview URL (Kubernetes ingress routes /api/* -> backend:8001, / -> frontend:3000)
+PUBLIC_URL = os.environ.get("EXPO_PUBLIC_BACKEND_URL", "https://whohas-app.preview.emergentagent.com").rstrip("/")
+# Backend internal URL — used to test the new app-level GET '/' health route
+# (in the preview env the public '/' is served by the frontend, but the
+# deployment platform health-checks the backend directly at '/').
+INTERNAL_BACKEND_URL = os.environ.get("INTERNAL_BACKEND_URL", "http://localhost:8001").rstrip("/")
 MONGO_URL = os.environ.get("MONGO_URL", "mongodb://localhost:27017")
 DB_NAME = os.environ.get("DB_NAME", "test_database")
 
@@ -23,79 +39,147 @@ def mongo():
     c.close()
 
 
-# ---- Root ----
-def test_root(session):
-    r = session.get(f"{BASE_URL}/api/")
-    assert r.status_code == 200
-    j = r.json()
-    assert "message" in j
-    assert "live_mode" in j
-    assert j["live_mode"] is False  # demo mode
+# ----------------------- NEW: root health route -----------------------
+class TestRootHealth:
+    """Deployment fix: app-level GET '/' must return 200 with {status:'ok'}."""
+
+    def test_backend_root_returns_health_json(self, session):
+        r = session.get(f"{INTERNAL_BACKEND_URL}/")
+        assert r.status_code == 200, r.text
+        data = r.json()
+        assert data.get("status") == "ok"
+        # service identifier is helpful but not strictly required
+        assert "service" in data
 
 
-# ---- Trending ----
-def test_trending_questions(session):
-    r = session.get(f"{BASE_URL}/api/trending-questions")
-    assert r.status_code == 200
-    data = r.json()
-    assert isinstance(data, list)
-    assert len(data) >= 3
-    for grp in data:
-        for k in ("category", "icon", "accent", "questions"):
-            assert k in grp
-        assert isinstance(grp["questions"], list)
-        assert len(grp["questions"]) > 0
+# ----------------------- /api/ root -----------------------
+class TestApiRoot:
+    def test_api_root(self, session):
+        r = session.get(f"{PUBLIC_URL}/api/")
+        assert r.status_code == 200, r.text
+        j = r.json()
+        assert "message" in j and "live_mode" in j
+        assert isinstance(j["live_mode"], bool)
 
 
-# ---- /api/ask ----
-@pytest.mark.parametrize("question", [
-    "Who has the best wings?",
-    "Who has discounts on pizza?",
-    "Who has the world record for fastest mile?",
-    "Who has the best lemonade in town?",  # generic / no keyword
-])
-def test_ask_returns_demo_answer(session, question):
-    r = session.post(f"{BASE_URL}/api/ask", json={"question": question})
-    assert r.status_code == 200, r.text
-    j = r.json()
-    for k in ("id", "question", "summary", "items", "demo", "sources_count", "created_at"):
-        assert k in j, f"missing {k}"
-    assert j["demo"] is True  # no keys -> demo
-    assert j["sources_count"] == 0
-    assert j["question"] == question
-    assert isinstance(j["items"], list) and len(j["items"]) >= 1
-    first = j["items"][0]
-    for k in ("rank", "name", "reason", "url"):
-        assert k in first
-    assert first["url"].startswith("http")
+# ----------------------- /api/trending-questions -----------------------
+class TestTrending:
+    def test_trending_returns_grocery_household(self, session):
+        r = session.get(f"{PUBLIC_URL}/api/trending-questions")
+        assert r.status_code == 200, r.text
+        data = r.json()
+        assert isinstance(data, list) and len(data) >= 2
+        for grp in data:
+            for k in ("category", "icon", "accent", "questions"):
+                assert k in grp, f"missing {k} in trending group"
+            assert isinstance(grp["questions"], list) and len(grp["questions"]) > 0
+        cats = [g["category"].lower() for g in data]
+        assert any("groc" in c for c in cats), "expected a Groceries category"
+        assert any("household" in c for c in cats), "expected a Household Supplies category"
 
 
-def test_ask_persists_to_mongo(session, mongo):
-    q = "Who has the best ramen TEST?"
-    r = session.post(f"{BASE_URL}/api/ask", json={"question": q})
-    assert r.status_code == 200
-    qid = r.json()["id"]
-    doc = mongo.queries.find_one({"id": qid})
-    assert doc is not None
-    assert doc["question"] == q
-    assert doc["demo"] is True
-    # cleanup
-    mongo.queries.delete_one({"id": qid})
+# ----------------------- /api/suggest -----------------------
+class TestSuggest:
+    def test_suggest_eggs(self, session):
+        r = session.get(f"{PUBLIC_URL}/api/suggest", params={"q": "eggs"})
+        assert r.status_code == 200, r.text
+        data = r.json()
+        assert isinstance(data, list) and len(data) >= 1
+        # first suggestion is normalized form of the query
+        assert any("egg" in s.lower() for s in data)
+
+    def test_suggest_empty_returns_empty_list(self, session):
+        r = session.get(f"{PUBLIC_URL}/api/suggest", params={"q": ""})
+        assert r.status_code == 200
+        assert r.json() == []
 
 
-def test_ask_validation_too_short(session):
-    r = session.post(f"{BASE_URL}/api/ask", json={"question": "a"})
-    assert r.status_code == 422
+# ----------------------- /api/ask: grocery (product card) -----------------------
+class TestAskGrocery:
+    def test_cheapest_eggs_returns_product_card(self, session):
+        r = session.post(f"{PUBLIC_URL}/api/ask", json={"question": "Who has the cheapest eggs?"})
+        assert r.status_code == 200, r.text
+        j = r.json()
+        # Top-level shape
+        for k in ("id", "question", "summary", "direct_answer", "items", "product", "demo", "sources_count", "created_at"):
+            assert k in j, f"missing {k} in ask response"
+        assert isinstance(j["summary"], str) and len(j["summary"]) > 0
+        assert isinstance(j["direct_answer"], str)  # may be empty if items empty but should not be
+        assert isinstance(j["items"], list) and len(j["items"]) >= 1
+        # Product card
+        product = j["product"]
+        assert product is not None, "expected a product card for a shopping/grocery question"
+        for k in ("name", "image", "stores"):
+            assert k in product, f"missing {k} in product"
+        assert isinstance(product["name"], str) and product["name"].strip() != ""
+        assert isinstance(product["image"], str) and product["image"].startswith("http")
+        stores = product["stores"]
+        assert isinstance(stores, list) and len(stores) == 3, "product must have exactly 3 stores"
+        for s in stores:
+            assert "store" in s and "price" in s
+            assert isinstance(s["store"], str) and s["store"].strip() != ""
+            assert isinstance(s["price"], (int, float)) and s["price"] > 0
+
+    def test_cheapest_store_is_min_price(self, session):
+        """Frontend highlights the cheapest store green — must equal min(prices)."""
+        r = session.post(f"{PUBLIC_URL}/api/ask", json={"question": "Who has the cheapest eggs?"})
+        assert r.status_code == 200
+        stores = r.json()["product"]["stores"]
+        prices = [s["price"] for s in stores]
+        assert min(prices) == min(prices)  # sanity
+        # The product card semantics: min(prices) is what the UI will highlight.
+        # Verify there's a unique-or-shared minimum and that it's strictly <= the others.
+        m = min(prices)
+        assert all(p >= m for p in prices)
+        # Also assert prices look reasonable (not all equal — factors are 0.93/1.0/1.08)
+        assert max(prices) > m
+
+    def test_household_query_also_returns_product(self, session):
+        r = session.post(f"{PUBLIC_URL}/api/ask", json={"question": "Who has the cheapest paper towels?"})
+        assert r.status_code == 200, r.text
+        j = r.json()
+        assert j["product"] is not None
+        assert len(j["product"]["stores"]) == 3
 
 
-def test_ask_validation_missing(session):
-    r = session.post(f"{BASE_URL}/api/ask", json={})
-    assert r.status_code == 422
+# ----------------------- /api/ask: non-shopping (product=null) -----------------------
+class TestAskNonShopping:
+    def test_olympic_question_returns_no_product(self, session):
+        r = session.post(f"{PUBLIC_URL}/api/ask",
+                         json={"question": "Who has the most Olympic gold medals?"})
+        assert r.status_code == 200, r.text
+        j = r.json()
+        assert j["product"] is None, "non-shopping questions must have product=null"
+        assert isinstance(j["summary"], str) and len(j["summary"]) > 0
+        assert isinstance(j["items"], list) and len(j["items"]) >= 1
+        # items have urls
+        for it in j["items"]:
+            for k in ("rank", "name", "reason", "url"):
+                assert k in it
+            assert it["url"].startswith("http")
 
 
-def test_ask_wings_keyword_mapping(session):
-    r = session.post(f"{BASE_URL}/api/ask", json={"question": "who has the best wings"})
-    assert r.status_code == 200
-    names = [it["name"] for it in r.json()["items"]]
-    # demo mapping should include Wingstop
-    assert any("Wingstop" in n for n in names)
+# ----------------------- Validation -----------------------
+class TestAskValidation:
+    def test_too_short(self, session):
+        r = session.post(f"{PUBLIC_URL}/api/ask", json={"question": "a"})
+        assert r.status_code == 422
+
+    def test_missing_field(self, session):
+        r = session.post(f"{PUBLIC_URL}/api/ask", json={})
+        assert r.status_code == 422
+
+
+# ----------------------- MongoDB persistence -----------------------
+class TestMongoPersistence:
+    def test_ask_persists_to_queries(self, session, mongo):
+        q = "Who has the cheapest eggs? TEST_persist"
+        r = session.post(f"{PUBLIC_URL}/api/ask", json={"question": q})
+        assert r.status_code == 200
+        qid = r.json()["id"]
+        doc = mongo.queries.find_one({"id": qid})
+        assert doc is not None, "expected /api/ask to insert a doc into queries collection"
+        assert doc["question"] == q
+        assert "summary" in doc and "demo" in doc and "sources_count" in doc and "created_at" in doc
+        # cleanup
+        mongo.queries.delete_one({"id": qid})

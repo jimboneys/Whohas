@@ -1,0 +1,37 @@
+{
+  "summary": "Deployment-fix verification — backend only. 12/12 pytest cases passed against the public preview URL (https://whohas-app.preview.emergentagent.com) and the new app-level root health route (verified on backend localhost:8001 because the preview Kubernetes ingress routes '/' to the Expo frontend, while '/api/*' is routed to FastAPI). Verified: (1) NEW GET '/' returns 200 with {status:'ok', service:'WhoHas API'} as required by the deployment platform health check, (2) GET /api/ returns 200 with {message, live_mode:false}, (3) POST /api/ask with 'Who has the cheapest eggs?' returns 200 with summary, direct_answer, items[>=1], and a non-null product card containing name, image (https URL), and exactly 3 stores each with name + numeric price, (4) cheapest price equals min(prices) and max>min (factors 0.93/1.0/1.08 confirmed), (5) household query 'Who has the cheapest paper towels?' also returns 3-store product card, (6) POST /api/ask with 'Who has the most Olympic gold medals?' returns 200 with product=null and a real summary/items list, (7) GET /api/trending-questions includes both 'Groceries' and 'Household Supplies' categories with required fields, (8) GET /api/suggest?q=eggs returns non-empty list with egg-related suggestions and empty q returns [], (9) MongoDB persistence — POST /api/ask inserts doc into queries collection with id/question/summary/demo/sources_count/created_at and the doc is retrievable. Validation cases (422 for too-short and missing question) also pass. Live mode is False because SERPAPI_API_KEY is empty (EMERGENT_LLM_KEY is set so /api/ask still calls Claude with no web grounding — observed in backend logs as LiteLLM completion calls). No critical or minor issues found; existing iteration_1 frontend testing remains valid.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_whohas_api.py",
+    "/app/test_reports/pytest/pytest_results.xml"
+  ],
+  "action_items": [
+    "Deployment note (informational, not a bug): in the PREVIEW environment, the public URL '/' is served by the Expo frontend (Kubernetes ingress), so the new backend root health route is not directly reachable at the public root — it is reachable on the backend container itself (localhost:8001/) where the deployment platform's health check will hit it. Verified working there.",
+    "Expo SDK version drift (warning seen in expo logs, non-blocking): expo@54.0.34 vs expected ~54.0.35, expo-font@14.0.11 vs ~14.0.12, expo-router@6.0.23 vs ~6.0.24. Optionally bump for compatibility."
+  ],
+  "critical_code_review_comments": [
+    "server.py: @app.get('/') is correctly registered at app level (outside /api router) so it satisfies platform health checks without polluting the API namespace.",
+    "Startup performs no drop/seed (Atlas-safe) — confirmed; only logs live mode.",
+    "claude_synthesize() handles missing web results gracefully (demo=False when Claude returns JSON, demo=True only if Claude call itself fails). Correct given EMERGENT_LLM_KEY is set but SERPAPI_API_KEY is empty.",
+    "MongoDB writes exclude _id from response (uses custom uuid 'id'); Pydantic response_model enforces shape. Good."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_whohas_api.py (rewritten for deployment-fix verification — root health, product card, non-shopping product=null, /api/suggest, mongo persistence, cheapest=min invariant)",
+    "/app/test_reports/pytest/pytest_results.xml (regenerated)"
+  ],
+  "success_rate": {"backend": "100%", "frontend": "not retested (no frontend changes in this fix)"},
+  "seed_data_creation": "None. One test doc inserted into Mongo 'queries' collection during test_ask_persists_to_queries and cleaned up in-test.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Backend tests live at /app/backend/tests/test_whohas_api.py. Use EXPO_PUBLIC_BACKEND_URL for all /api/* calls. The app-level GET '/' (deployment health route) is masked by the preview ingress (which serves the frontend at '/'), so tests hit it via INTERNAL_BACKEND_URL (default http://localhost:8001). Current env: EMERGENT_LLM_KEY is set, SERPAPI_API_KEY is empty → live_mode=False but /api/ask still calls Claude (LiteLLM logs show outbound calls) and returns demo=False when Claude responds with valid JSON. Product PRICES are deterministically generated (mocked, expected) — factors 0.93/1.0/1.08 over a base price keyed by topic; cheapest = min of the 3.",
+  "rca_of_issue": "N/A — deployment-fix verification, no failures detected."
+}

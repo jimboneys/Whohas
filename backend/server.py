@@ -16,7 +16,11 @@ import requests
 from pydantic import BaseModel, Field
 
 ROOT_DIR = Path(__file__).parent
-load_dotenv(ROOT_DIR / '.env')
+# Load local .env for development but NEVER override real environment variables.
+# In production the platform injects MONGO_URL / DB_NAME (MongoDB Atlas) and the
+# LLM keys directly into the container env — those must win over any values that
+# happen to be bundled in .env, otherwise the app would connect to the wrong DB.
+load_dotenv(ROOT_DIR / '.env', override=False)
 
 mongo_url = os.environ['MONGO_URL']
 client = AsyncIOMotorClient(mongo_url)

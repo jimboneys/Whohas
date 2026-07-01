@@ -30,11 +30,11 @@ export type TrendingGroup = {
   questions: string[];
 };
 
-export async function ask(question: string): Promise<AskResponse> {
+export async function ask(question: string, location?: string): Promise<AskResponse> {
   const res = await fetch(`${BASE}/api/ask`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ question }),
+    body: JSON.stringify({ question, location: location || null }),
   });
   if (!res.ok) throw new Error(`Request failed (${res.status})`);
   return res.json();

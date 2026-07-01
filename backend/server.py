@@ -42,6 +42,7 @@ api_router = APIRouter(prefix="/api")
 # ---------------- Models ----------------
 class AskRequest(BaseModel):
     question: str = Field(..., min_length=2, max_length=300)
+    location: Optional[str] = None
 
 
 class AnswerItem(BaseModel):
@@ -440,6 +441,12 @@ async def ask(payload: AskRequest):
     question = payload.question.strip()
     if not question:
         raise HTTPException(status_code=400, detail="Question is required")
+
+    # Make the answer local: fold the user's city into the query so both the
+    # web search and Claude (and the offline engine) resolve nearby results.
+    loc = (payload.location or "").strip()
+    if loc and loc.lower() not in question.lower() and not re.search(r"near me|nearby", question, re.I):
+        question = f"{question} in {loc}"
 
     results = web_search(question)
     synth = await claude_synthesize(question, results)

@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect } from "react";
 import {
   View, Text, TextInput, StyleSheet, ScrollView, Pressable,
-  KeyboardAvoidingView, Platform, Keyboard,
+  KeyboardAvoidingView, Platform, Keyboard, Linking,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter, useFocusEffect } from "expo-router";
@@ -11,6 +11,7 @@ import * as Haptics from "expo-haptics";
 import { colors, fonts, spacing, radius, shadow } from "@/src/theme";
 import { getHistory } from "@/src/history";
 import { suggest } from "@/src/api";
+import { ensureLocation, getSavedCity } from "@/src/location";
 
 const EXAMPLES = [
   "the cheapest eggs",
@@ -26,12 +27,26 @@ export default function AskScreen() {
   const [q, setQ] = useState("");
   const [recent, setRecent] = useState<string[]>([]);
   const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [city, setCity] = useState("");
+  const [locBusy, setLocBusy] = useState(false);
+  const [locBlocked, setLocBlocked] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
       getHistory().then((h) => setRecent(h.slice(0, 4).map((x) => x.q)));
+      getSavedCity().then(setCity);
     }, [])
   );
+
+  const handleLocation = async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    setLocBusy(true);
+    setLocBlocked(false);
+    const r = await ensureLocation();
+    setLocBusy(false);
+    if (r.city) setCity(r.city);
+    else if (r.blocked) setLocBlocked(true);
+  };
 
   useEffect(() => {
     const v = q.trim();
@@ -77,6 +92,19 @@ export default function AskScreen() {
           </Text>
         </View>
         <Text style={styles.tagline}>Hey 👋 what are you looking for today?</Text>
+
+        <Pressable style={styles.locChip} testID="location-chip" onPress={handleLocation}>
+          <Ionicons name="location" size={14} color={colors.brand} />
+          <Text style={styles.locText}>
+            {city ? city : locBusy ? "Locating…" : "Use my location"}
+          </Text>
+          {city ? <Ionicons name="checkmark-circle" size={14} color={colors.success} /> : null}
+        </Pressable>
+        {locBlocked && (
+          <Pressable testID="location-settings" onPress={() => Linking.openSettings()}>
+            <Text style={styles.locBlockedText}>Location is blocked — tap to open Settings</Text>
+          </Pressable>
+        )}
 
         <View style={styles.searchCard} testID="search-card">
           <Text style={styles.prefix}>Who has</Text>
@@ -186,12 +214,22 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: colors.border, ...shadow.card,
   },
   input: {
-    flex: 1, fontFamily: fonts.bodyBold, fontSize: 18, color: colors.onSurface,
+    flex: 1, fontFamily: fonts.bodyBold, fontSize: 17, lineHeight: 22, color: colors.onSurface,
     paddingVertical: spacing.md, maxHeight: 110,
   },
   prefix: {
-    fontFamily: fonts.display, fontSize: 18, color: colors.brand,
+    fontFamily: fonts.bodyExtra, fontSize: 17, lineHeight: 22, color: colors.brand,
     paddingVertical: spacing.md, marginRight: 6,
+  },
+  locChip: {
+    flexDirection: "row", alignItems: "center", gap: 6, alignSelf: "flex-start",
+    backgroundColor: colors.brandTertiary, borderRadius: radius.pill,
+    paddingHorizontal: spacing.md, paddingVertical: spacing.sm, marginBottom: spacing.lg,
+  },
+  locText: { fontFamily: fonts.bodyBold, fontSize: 13, color: colors.onBrandTertiary },
+  locBlockedText: {
+    fontFamily: fonts.bodyBold, fontSize: 12.5, color: colors.brand,
+    marginTop: -spacing.sm, marginBottom: spacing.md,
   },
   askBtn: {
     width: 52, height: 52, borderRadius: radius.md, backgroundColor: colors.brand,
@@ -203,10 +241,11 @@ const styles = StyleSheet.create({
   },
   chipWrap: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
   chip: {
-    backgroundColor: colors.brandTertiary, borderRadius: radius.pill,
+    backgroundColor: colors.surfaceSecondary, borderRadius: radius.pill,
     paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
+    borderWidth: 1, borderColor: colors.border,
   },
-  chipText: { fontFamily: fonts.bodyBold, fontSize: 14, color: colors.onBrandTertiary },
+  chipText: { fontFamily: fonts.bodyBold, fontSize: 14, color: colors.onSurfaceTertiary },
   recentRow: {
     flexDirection: "row", alignItems: "center", gap: spacing.md,
     backgroundColor: colors.surfaceSecondary, borderRadius: radius.md,

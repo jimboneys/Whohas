@@ -12,6 +12,7 @@ import * as Clipboard from "expo-clipboard";
 import { colors, fonts, spacing, radius, shadow } from "@/src/theme";
 import { ask, AskResponse } from "@/src/api";
 import { addHistory } from "@/src/history";
+import { getSavedCity } from "@/src/location";
 import ProductResult from "@/src/components/ProductResult";
 
 export default function ResultsScreen() {
@@ -30,7 +31,8 @@ export default function ResultsScreen() {
     if (!question) return;
     setLoading(true);
     setError(false);
-    ask(question)
+    getSavedCity()
+      .then((city) => ask(question, city))
       .then((res) => {
         setData(res);
         addHistory(question);

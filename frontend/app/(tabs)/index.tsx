@@ -12,6 +12,7 @@ import { colors, fonts, spacing, radius, shadow } from "@/src/theme";
 import { getHistory } from "@/src/history";
 import { suggest } from "@/src/api";
 import { ensureLocation, getSavedCity } from "@/src/location";
+import InstallButton from "@/src/components/InstallButton";
 
 const EXAMPLES = [
   "the cheapest eggs",
@@ -105,6 +106,8 @@ export default function AskScreen() {
             <Text style={styles.locBlockedText}>Location is blocked — tap to open Settings</Text>
           </Pressable>
         )}
+
+        <InstallButton />
 
         <View style={styles.searchCard} testID="search-card">
           <Text style={styles.prefix}>Who has</Text>

@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect } from "react";
 import {
   View, Text, TextInput, StyleSheet, ScrollView, Pressable,
-  KeyboardAvoidingView, Platform, Keyboard, Linking,
+  KeyboardAvoidingView, Platform, Keyboard, Linking, Share,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter, useFocusEffect } from "expo-router";
@@ -74,6 +74,28 @@ export default function AskScreen() {
 
   const askChip = (phrase: string) => submit(`Who has ${phrase}?`);
 
+  const shareApp = async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+    const url = Platform.OS === "web" ? (window as any)?.location?.origin || "" : "";
+    const message =
+      "🔎 WhoHas — the fastest way to find who has the cheapest groceries & household supplies. " +
+      "No BS, just the best deal." + (url ? `\n\n${url}` : "");
+    try {
+      if (Platform.OS === "web") {
+        const nav = (window as any).navigator;
+        if (nav?.share) {
+          await nav.share({ title: "WhoHas", text: message, url });
+        } else if (nav?.clipboard?.writeText) {
+          await nav.clipboard.writeText(url || message);
+        }
+        return;
+      }
+      await Share.share({ message, title: "WhoHas" });
+    } catch {
+      /* user dismissed */
+    }
+  };
+
   return (
     <KeyboardAvoidingView
       style={styles.flex}
@@ -91,6 +113,15 @@ export default function AskScreen() {
           <Text style={styles.wordmark}>
             Who<Text style={{ color: colors.brand }}>Has</Text>
           </Text>
+          <View style={{ flex: 1 }} />
+          <Pressable
+            testID="share-app-button"
+            style={({ pressed }) => [styles.shareBtn, pressed && { opacity: 0.85 }]}
+            onPress={shareApp}
+            hitSlop={8}
+          >
+            <Ionicons name="share-social-outline" size={20} color={colors.brand} />
+          </Pressable>
         </View>
         <Text style={styles.tagline}>Hey 👋 what are you looking for today?</Text>
 
@@ -199,6 +230,10 @@ const styles = StyleSheet.create({
     alignItems: "center", justifyContent: "center",
   },
   wordmark: { fontFamily: fonts.display, fontSize: 28, color: colors.onSurface },
+  shareBtn: {
+    width: 40, height: 40, borderRadius: radius.pill, backgroundColor: colors.brandTertiary,
+    alignItems: "center", justifyContent: "center",
+  },
   tagline: { fontFamily: fonts.body, fontSize: 15, color: colors.onSurfaceTertiary, marginTop: spacing.xs, marginBottom: spacing.lg },
   modeRow: {
     flexDirection: "row", gap: spacing.sm, backgroundColor: colors.surfaceTertiary,

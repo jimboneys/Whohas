@@ -13,6 +13,7 @@ import { getHistory } from "@/src/history";
 import { suggest } from "@/src/api";
 import { ensureLocation, getSavedCity } from "@/src/location";
 import InstallButton from "@/src/components/InstallButton";
+import AdSlots from "@/src/components/AdSlots";
 
 const EXAMPLES = [
   "the cheapest eggs",
@@ -195,6 +196,8 @@ export default function AskScreen() {
                 ))}
               </>
             )}
+
+            <AdSlots />
           </>
         ) : (
           <>

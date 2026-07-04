@@ -12,7 +12,8 @@
       "supportsTablet": true,
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "Find the cheapest stores near you"
-      }
+      },
+      "bundleIdentifier": "com.emergent.whohasapp.pg7qrr"
     },
     "android": {
       "adaptiveIcon": {
@@ -20,7 +21,11 @@
         "backgroundColor": "#000"
       },
       "edgeToEdgeEnabled": true,
-      "permissions": ["ACCESS_COARSE_LOCATION", "ACCESS_FINE_LOCATION"]
+      "permissions": [
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION"
+      ],
+      "package": "com.emergent.whohasapp.pg7qrr"
     },
     "web": {
       "bundler": "metro",

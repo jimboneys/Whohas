@@ -25,6 +25,9 @@ const FEATURED: Slot = {
 const SMALL: Slot[] = [
   { key: "sponsor", label: "Sponsor", icon: "star", accent: colors.success, tint: colors.successSoft },
   { key: "weekly", label: "This Week", icon: "calendar", accent: "#118AB2", tint: "#E3F2F7" },
+  { key: "flash", label: "Flash Sale", icon: "flame", accent: "#FF8C42", tint: "#FFE8D6" },
+  { key: "local", label: "Local Hero", icon: "location", accent: "#EF476F", tint: "#FDE0E8" },
+  { key: "coupon", label: "Coupon", icon: "pricetag", accent: "#7B61FF", tint: "#ECE6FF" },
 ];
 
 function openAdvertise(slot: string) {
@@ -116,9 +119,9 @@ const styles = StyleSheet.create({
   featuredCta: { fontFamily: fonts.bodyBold, fontSize: 13, color: colors.onSurfaceTertiary, marginTop: 1 },
   pricePill: { borderRadius: radius.pill, paddingHorizontal: spacing.md, paddingVertical: 6 },
   priceText: { fontFamily: fonts.bodyExtra, fontSize: 15, color: colors.onBrand },
-  smallRow: { flexDirection: "row", gap: spacing.md, marginTop: spacing.md },
+  smallRow: { flexDirection: "row", flexWrap: "wrap", gap: spacing.md, marginTop: spacing.md },
   smallCard: {
-    flex: 1, backgroundColor: colors.surfaceSecondary, borderRadius: radius.lg,
+    width: "47%", flexGrow: 1, backgroundColor: colors.surfaceSecondary, borderRadius: radius.lg,
     padding: spacing.lg, borderWidth: 2, borderStyle: "dashed", alignItems: "flex-start", gap: 4,
     ...shadow.soft,
   },

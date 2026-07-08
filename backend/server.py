@@ -655,7 +655,7 @@ async def create_comment(payload: CommentCreate):
         raise HTTPException(status_code=400, detail="Comment text is required")
     author = (payload.author or "").strip() or "Anonymous"
     if payload.parent_id:
-        parent = await db.comments.find_one({"id": payload.parent_id})
+        parent = await db.comments.find_one({"id": payload.parent_id}, {"_id": 1})
         if not parent:
             raise HTTPException(status_code=404, detail="Parent comment not found")
     doc = {

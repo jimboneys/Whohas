@@ -1,0 +1,32 @@
+{
+  "summary": "Regression pass for the minor backend change in POST /api/comments (parent lookup now uses projection {\"_id\": 1}). Re-ran the full backend suite against the public EXPO_PUBLIC_BACKEND_URL. Result: 28/28 PASSED — 16/16 in test_community_and_ads.py (create top-level, reply+nesting with valid parent, threads newest-first / replies oldest-first, invalid parent -> 404, default/blank author -> Anonymous, empty/whitespace/missing/too-long text validation, like increments + 404 on unknown id, ad-clicks GET seeded keys deal/sponsor/weekly with baseline counts, POST /api/ad-clicks/{key} increment + unknown-key upsert, cleanup) and 12/12 in test_whohas_api.py (GET / and GET /api/ health both 200, /trending-questions, /suggest, /ask grocery+household product card, non-shopping no product, validation, Mongo persistence). The projection did not break the truthiness check: MongoDB returns {\"_id\": ObjectId(...)} (truthy) when found and None when not, so `if not parent` still correctly raises 404 for invalid parent_id and lets valid replies through — confirmed by test_create_reply_and_nesting (reply created 200, appears nested under parent with correct oldest-first ordering) and test_reply_to_unknown_parent_returns_404 (404 as expected).",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_community_and_ads.py",
+    "/app/backend/tests/test_whohas_api.py",
+    "/app/test_reports/pytest/pytest_results.xml"
+  ],
+  "action_items": [
+    "None — projection change is a safe optimization (reduces payload transferred from Mongo to backend for a boolean existence check). No follow-up required."
+  ],
+  "critical_code_review_comments": [
+    "server.py:658 — Using projection {\"_id\": 1} for an existence check is correct and efficient. Alternative even-more-explicit form would be to use db.comments.count_documents({\"id\": payload.parent_id}, limit=1) > 0, but the current approach is fine and consistent with the codebase style. Note: the projection returns _id (Mongo's internal ObjectId) but the doc is never returned to the client — only used for truthiness — so no serialization risk.",
+    "server.py:634-648 — list_comments still returns up to 1000 docs with no pagination. Unchanged from prior review; add cursor/limit before public launch (pre-existing note from iteration_4)."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "100% (28/28)", "frontend": "not tested (backend-only request)"},
+  "seed_data_creation": "Test rows prefixed TEST_ inserted then removed by test_cleanup_test_data. Side-effect: ad_clicks.deal and ad_clicks.TEST_new_key incremented by 1 each during the run (functional part of the POST /api/ad-clicks/{key} tests). Test-created TEST_new_key row cleaned up by the cleanup step.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Backend fully verified for the projection change on POST /api/comments parent lookup. Deployment-ready from a comments/threading standpoint. Public URL comes from EXPO_PUBLIC_BACKEND_URL in /app/frontend/.env. Pytest env requires: EXPO_PUBLIC_BACKEND_URL (from frontend/.env), MONGO_URL and DB_NAME (from backend/.env). Run: `export EXPO_PUBLIC_BACKEND_URL=$(grep '^EXPO_PUBLIC_BACKEND_URL=' /app/frontend/.env | cut -d= -f2) && export $(grep -E '^(MONGO_URL|DB_NAME)=' /app/backend/.env | xargs) && cd /app/backend && python -m pytest tests/ -v`.",
+  "rca_of_issue": "N/A — no bug; minor optimization confirmed non-breaking."
+}

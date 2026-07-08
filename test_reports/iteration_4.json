@@ -1,0 +1,46 @@
+{
+  "summary": "Full-stack verification of the new Community comments feature and Partner Ad slots + click counter. Backend: created /app/backend/tests/test_community_and_ads.py (16 tests) covering POST/GET /api/comments, replies + nesting, threads-newest-first / replies-oldest-first ordering, invalid parent -> 404, text validation (empty/whitespace/missing/too long -> 400/422), like increment + 404 on unknown id, and /api/ad-clicks GET (seeded deal/sponsor/weekly) + POST increment + upsert of new keys. Result: 16/16 PASSED in 1.7s against the public EXPO_PUBLIC_BACKEND_URL. Frontend (mobile viewport 390x844): Community tab loads via _layout.tsx, existing seed comments (DealHunter/Mom2) render as threads with nested reply and Like/Reply actions. Composer flow works end-to-end: typed nickname + text -> POST /api/comments -> new post appears in feed after refresh; Reply button opens 'Replying to <author>' banner and posts as nested reply inside the same thread; Like button increments count (heart fills, '1 Like' shown); nickname persists across the refresh button click (AsyncStorage via storage util). Home screen Partner Spots renders exactly 3 sponsored MOCKED cards (ALDI 'Deal of the Day' featured with 1.2k clicks, Costco 'Sponsor' with 856 clicks, Kroger 'This Week' with 402 clicks) and 3 open 'Advertise here' cards (Flash Sale / Local Hero / Coupon) — matches DEFAULT_AD_CLICKS seed values.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": [
+      {"component": "AdSlots.tsx (Image)", "issue": "React Native Web console warning: 'Image: style.resizeMode is deprecated. Please use props.resizeMode.' Reference: /app/frontend/src/components/AdSlots.tsx:196,210 (styles.featuredImg and styles.smallImg use resizeMode inside StyleSheet). Non-blocking but should be migrated by moving resizeMode from style to the Image prop."},
+      {"component": "Global styles (shadow.soft)", "issue": "React Native Web console warning: '\"shadow*\" style props are deprecated. Use \"boxShadow\".' Emitted multiple times on load from the app theme's shadow.soft. Reference: /app/frontend/src/theme.ts (shadow.soft consumed by AdSlots.tsx and community.tsx). Non-blocking on native; worth migrating for RN Web / newer RN."},
+      {"component": "Global (pointerEvents)", "issue": "React Native Web warning: 'props.pointerEvents is deprecated. Use style.pointerEvents'. Likely emitted by a library (expo-router / RN internals). Informational only."}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_community_and_ads.py",
+    "/app/backend/tests/test_whohas_api.py",
+    "/app/test_reports/pytest/pytest_results.xml"
+  ],
+  "action_items": [
+    "(Optional polish) Migrate Image resizeMode from StyleSheet to prop in AdSlots.tsx (featuredImg + smallImg) to silence RN Web deprecation.",
+    "(Optional polish) Replace shadow* style entries in the theme's shadow.soft with boxShadow (or gate per Platform.OS) for RN Web parity.",
+    "No functional changes required — Community + Ad-clicks features are working end-to-end."
+  ],
+  "critical_code_review_comments": [
+    "server.py:625-673 — Comments endpoints are well-modeled. Nesting is a single-level flatten (parent_id chain deeper than 1 is silently promoted to a root). This matches the UI which only renders one reply level, but if arbitrary depth is ever supported this would need a recursive build.",
+    "server.py:642-651 — text is validated by Pydantic min_length=1 AND server-side strip() + 400 check. Good defensive validation (whitespace-only correctly rejected).",
+    "server.py:597-605 — POST /api/ad-clicks/{key} uses upsert=True, so any key increments (verified). Not a bug, but worth documenting so unknown keys can't be used to inflate arbitrary rows in prod; consider whitelisting slot keys against DEFAULT_AD_SLOTS.",
+    "AdSlots.tsx:25-50 — Sponsors are hardcoded MOCK ads (ALDI/Costco/Kroger) — flagged in mocked_apis_list as expected. Click counts are backend-backed and seeded (deal:1240, sponsor:856, weekly:402).",
+    "community.tsx:60-72 — onLike is client-guarded via `liked[c.id]` state and optimistic bump; backend does NOT enforce one-like-per-user (no auth), so a page reload allows re-liking. Acceptable for anonymous MVP but worth documenting.",
+    "community.tsx / api.ts — Uses EXPO_PUBLIC_BACKEND_URL correctly; all fetches route through /api. No hardcoded URLs.",
+    "server.py:625 — list_comments returns up to 1000 docs with no pagination; fine for MVP scale but add cursor/limit before public launch."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_community_and_ads.py (new)",
+    "/app/test_reports/pytest/pytest_results.xml (regenerated)"
+  ],
+  "success_rate": {"backend": "100% (16/16 new + prior 12/12 unchanged)", "frontend": "100% of tested Community + Ad-slot flows"},
+  "seed_data_creation": "Test-created comments/ad_clicks prefixed with TEST_ were inserted and cleaned up by the final cleanup test. Deal/sponsor/weekly click counts increased by 1 each during testing (functional side-effect of the POST /api/ad-clicks/{key} test).",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Community + ad-clicks tests live at /app/backend/tests/test_community_and_ads.py. Public URL from env: EXPO_PUBLIC_BACKEND_URL. Mongo collections: db.comments (id/author/text/parent_id/likes/created_at) and db.ad_clicks (key/clicks) — seeded on backend startup via seed_ad_clicks() for keys deal/sponsor/weekly. Frontend testIDs: community-header, community-composer, community-name-input, community-text-input, community-send, community-refresh, cancel-reply, comment-<id>, reply-<id>, like-<id>, ad-slot-<key> (deal/sponsor/weekly/flash/local/coupon). AdSlots sponsors are MOCKED and hardcoded in AdSlots.tsx (ALDI/Costco/Kroger).",
+  "rca_of_issue": "N/A — feature verification passed; no failures."
+}

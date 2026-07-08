@@ -84,3 +84,44 @@ export async function trackAdClick(key: string): Promise<number | null> {
     return null;
   }
 }
+
+export type Comment = {
+  id: string;
+  author: string;
+  text: string;
+  parent_id?: string | null;
+  likes: number;
+  created_at: string;
+  replies: Comment[];
+};
+
+export async function getComments(): Promise<Comment[]> {
+  const res = await fetch(`${BASE}/api/comments`);
+  if (!res.ok) return [];
+  return res.json();
+}
+
+export async function postComment(
+  author: string,
+  text: string,
+  parentId?: string
+): Promise<Comment> {
+  const res = await fetch(`${BASE}/api/comments`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ author, text, parent_id: parentId || null }),
+  });
+  if (!res.ok) throw new Error(`Failed to post (${res.status})`);
+  return res.json();
+}
+
+export async function likeComment(id: string): Promise<number | null> {
+  try {
+    const res = await fetch(`${BASE}/api/comments/${id}/like`, { method: "POST" });
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data.likes ?? null;
+  } catch {
+    return null;
+  }
+}

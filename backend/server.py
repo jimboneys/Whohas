@@ -605,6 +605,74 @@ async def track_ad_click(key: str):
     return {"key": key, "clicks": (doc or {}).get("clicks", 1)}
 
 
+# ---------------- Community comments ----------------
+class CommentCreate(BaseModel):
+    author: str = Field("Anonymous", max_length=40)
+    text: str = Field(..., min_length=1, max_length=600)
+    parent_id: Optional[str] = None
+
+
+class CommentOut(BaseModel):
+    id: str
+    author: str
+    text: str
+    parent_id: Optional[str] = None
+    likes: int
+    created_at: str
+    replies: List["CommentOut"] = []
+
+
+@api_router.get("/comments", response_model=List[CommentOut])
+async def list_comments():
+    docs = await db.comments.find({}, {"_id": 0}).to_list(length=1000)
+    by_id = {d["id"]: {**d, "replies": []} for d in docs}
+    roots: List[Dict[str, Any]] = []
+    for d in by_id.values():
+        pid = d.get("parent_id")
+        if pid and pid in by_id:
+            by_id[pid]["replies"].append(d)
+        else:
+            roots.append(d)
+    for d in by_id.values():
+        d["replies"].sort(key=lambda x: x["created_at"])  # oldest replies first
+    roots.sort(key=lambda x: x["created_at"], reverse=True)  # newest threads first
+    return roots
+
+
+@api_router.post("/comments", response_model=CommentOut)
+async def create_comment(payload: CommentCreate):
+    text = payload.text.strip()
+    if not text:
+        raise HTTPException(status_code=400, detail="Comment text is required")
+    author = (payload.author or "").strip() or "Anonymous"
+    if payload.parent_id:
+        parent = await db.comments.find_one({"id": payload.parent_id})
+        if not parent:
+            raise HTTPException(status_code=404, detail="Parent comment not found")
+    doc = {
+        "id": str(uuid.uuid4()),
+        "author": author[:40],
+        "text": text,
+        "parent_id": payload.parent_id,
+        "likes": 0,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    }
+    await db.comments.insert_one(doc)
+    return {**doc, "replies": []}
+
+
+@api_router.post("/comments/{comment_id}/like")
+async def like_comment(comment_id: str):
+    doc = await db.comments.find_one_and_update(
+        {"id": comment_id},
+        {"$inc": {"likes": 1}},
+        return_document=ReturnDocument.AFTER,
+    )
+    if not doc:
+        raise HTTPException(status_code=404, detail="Comment not found")
+    return {"id": comment_id, "likes": doc.get("likes", 1)}
+
+
 def normalize_query(q: str) -> str:
     ql = q.strip().rstrip("?")
     if re.match(r"^(who|where|which|what|when|how|do|does|is|are|can)\b", ql, re.IGNORECASE):

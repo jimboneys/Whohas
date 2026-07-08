@@ -27,7 +27,7 @@ function openAdvertise(slot: AdSlot) {
   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
   const subject = encodeURIComponent(`WhoHas ad slot: ${slot.label}`);
   const body = encodeURIComponent(
-    `Hi! I'd like to advertise in the "${slot.label}" spot on WhoHas ($${slot.price}). Here are my details:`
+    `Hi! I'd like to advertise in the "${slot.label}" spot on WhoHas. Here are my details:`
   );
   Linking.openURL(`mailto:${ADVERTISE_EMAIL}?subject=${subject}&body=${body}`).catch(() => {});
 }
@@ -109,8 +109,8 @@ function FeaturedCard({ slot }: { slot: AdSlot }) {
       {booked ? (
         <Ionicons name="chevron-forward" size={22} color={st.accent} />
       ) : (
-        <View style={[styles.pricePill, { backgroundColor: st.accent }]}>
-          <Text style={styles.priceText}>${slot.price}</Text>
+        <View style={[styles.pricePill, { backgroundColor: st.tint }]}>
+          <Ionicons name="add" size={18} color={st.accent} />
         </View>
       )}
     </Pressable>
@@ -156,8 +156,9 @@ function SmallCard({ slot }: { slot: AdSlot }) {
           <Ionicons name="arrow-forward" size={13} color={st.accent} />
         </View>
       ) : (
-        <View style={[styles.pricePillSm, { backgroundColor: st.accent }]}>
-          <Text style={styles.priceTextSm}>${slot.price}</Text>
+        <View style={[styles.visitRow]}>
+          <Text style={[styles.visitText, { color: st.accent }]}>Book spot</Text>
+          <Ionicons name="add-circle" size={14} color={st.accent} />
         </View>
       )}
     </Pressable>
@@ -194,8 +195,7 @@ const styles = StyleSheet.create({
   featuredCta: { fontFamily: fonts.bodyBold, fontSize: 13, color: colors.onSurfaceTertiary, marginTop: 1 },
   adTag: { borderRadius: radius.sm, paddingHorizontal: 5, paddingVertical: 1 },
   adTagText: { fontFamily: fonts.bodyExtra, fontSize: 9, letterSpacing: 0.5 },
-  pricePill: { borderRadius: radius.pill, paddingHorizontal: spacing.md, paddingVertical: 6 },
-  priceText: { fontFamily: fonts.bodyExtra, fontSize: 15, color: colors.onBrand },
+  pricePill: { width: 34, height: 34, borderRadius: radius.pill, alignItems: "center", justifyContent: "center" },
   smallRow: { flexDirection: "row", flexWrap: "wrap", gap: spacing.md, marginTop: spacing.md },
   smallCard: {
     width: "47%", flexGrow: 1, backgroundColor: colors.surfaceSecondary, borderRadius: radius.lg,
@@ -204,8 +204,6 @@ const styles = StyleSheet.create({
   },
   smallLabel: { fontFamily: fonts.display, fontSize: 15, color: colors.onSurface, flexShrink: 1 },
   smallCta: { fontFamily: fonts.bodyBold, fontSize: 12, color: colors.onSurfaceTertiary },
-  pricePillSm: { borderRadius: radius.pill, paddingHorizontal: spacing.md, paddingVertical: 5, marginTop: spacing.sm },
-  priceTextSm: { fontFamily: fonts.bodyExtra, fontSize: 13, color: colors.onBrand },
   visitRow: { flexDirection: "row", alignItems: "center", gap: 3, marginTop: spacing.sm },
   visitText: { fontFamily: fonts.bodyExtra, fontSize: 13 },
 });

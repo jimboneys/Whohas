@@ -13,6 +13,7 @@ import { suggest } from "@/src/api";
 import { ensureLocation, getSavedCity } from "@/src/location";
 import InstallButton from "@/src/components/InstallButton";
 import AdSlots from "@/src/components/AdSlots";
+import LocalSpecial from "@/src/components/LocalSpecial";
 
 export default function AskScreen() {
   const insets = useSafeAreaInsets();
@@ -153,7 +154,10 @@ export default function AskScreen() {
         </View>
 
         {q.trim().length === 0 ? (
-          <AdSlots />
+          <>
+            <LocalSpecial />
+            <AdSlots />
+          </>
         ) : (
           <>
             <Text style={styles.sectionLabel}>SUGGESTIONS</Text>

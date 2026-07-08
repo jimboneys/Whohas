@@ -1,47 +1,45 @@
-import { View, Text, StyleSheet, Pressable } from "react-native";
+import { View, Text, StyleSheet, Pressable, Image } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import * as WebBrowser from "expo-web-browser";
 
 import { colors, fonts, spacing, radius, shadow } from "@/src/theme";
 
-type Sponsor = { name: string; tagline: string; url: string };
+type Sponsor = { name: string; tagline: string; url: string; image: string };
 
 type Slot = {
   key: string;
   label: string;
-  icon: keyof typeof Ionicons.glyphMap;
   accent: string;
   tint: string;
   featured?: boolean;
-  sponsor?: Sponsor; // MOCK ad — sample brands/deals for demo purposes
+  sponsor: Sponsor; // MOCK ad — sample brands/deals for demo purposes
 };
 
-// Hardcoded partner spots with MOCK ads.
+const IMG = "?crop=entropy&cs=srgb&fm=jpg&q=85&w=500";
+
+// Hardcoded partner spots with MOCK ads + high-quality imagery.
 const SLOTS: Slot[] = [
   {
-    key: "deal", label: "Deal of the Day", icon: "flash", accent: colors.brand, tint: colors.brandTertiary, featured: true,
-    sponsor: { name: "ALDI", tagline: "Dozen large eggs — just $2.25 today", url: "https://www.aldi.us/weekly-specials/" },
+    key: "deal", label: "Deal of the Day", accent: colors.brand, tint: colors.brandTertiary, featured: true,
+    sponsor: {
+      name: "ALDI", tagline: "Dozen large eggs — just $2.25 today", url: "https://www.aldi.us/weekly-specials/",
+      image: "https://images.unsplash.com/photo-1582722872445-44dc5f7e3c8f" + IMG,
+    },
   },
   {
-    key: "sponsor", label: "Sponsor", icon: "star", accent: colors.success, tint: colors.successSoft,
-    sponsor: { name: "Costco", tagline: "Bulk savings on household staples", url: "https://www.costco.com" },
+    key: "sponsor", label: "Sponsor", accent: colors.success, tint: colors.successSoft,
+    sponsor: {
+      name: "Costco", tagline: "Bulk savings on household staples", url: "https://www.costco.com",
+      image: "https://images.unsplash.com/photo-1542838132-92c53300491e" + IMG,
+    },
   },
   {
-    key: "weekly", label: "This Week", icon: "calendar", accent: "#118AB2", tint: "#E3F2F7",
-    sponsor: { name: "Kroger", tagline: "Weekly digital coupons live now", url: "https://www.kroger.com/weeklyad" },
-  },
-  {
-    key: "flash", label: "Flash Sale", icon: "flame", accent: "#FF8C42", tint: "#FFE8D6",
-    sponsor: { name: "Target", tagline: "24hr flash: 20% off cleaning", url: "https://www.target.com/c/cleaning-supplies" },
-  },
-  {
-    key: "local", label: "Local Hero", icon: "location", accent: "#EF476F", tint: "#FDE0E8",
-    sponsor: { name: "Instacart", tagline: "Same-day delivery near you", url: "https://www.instacart.com" },
-  },
-  {
-    key: "coupon", label: "Coupon", icon: "pricetag", accent: "#7B61FF", tint: "#ECE6FF",
-    sponsor: { name: "Walmart", tagline: "$10 off your first $50 grocery order", url: "https://www.walmart.com/cp/grocery/5431943" },
+    key: "weekly", label: "This Week", accent: "#118AB2", tint: "#E3F2F7",
+    sponsor: {
+      name: "Kroger", tagline: "Weekly digital coupons live now", url: "https://www.kroger.com/weeklyad",
+      image: "https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da" + IMG,
+    },
   },
 ];
 
@@ -64,15 +62,13 @@ export default function AdSlots() {
         </View>
       </View>
 
-      {featured && featured.sponsor ? (
+      {featured ? (
         <Pressable
           testID={`ad-slot-${featured.key}`}
           style={({ pressed }) => [styles.featured, { borderColor: featured.accent }, pressed && { opacity: 0.92 }]}
-          onPress={() => openSponsor(featured.sponsor!.url)}
+          onPress={() => openSponsor(featured.sponsor.url)}
         >
-          <View style={[styles.iconBadge, { backgroundColor: featured.tint }]}>
-            <Ionicons name={featured.icon} size={22} color={featured.accent} />
-          </View>
+          <Image source={{ uri: featured.sponsor.image }} style={styles.featuredImg} />
           <View style={{ flex: 1 }}>
             <View style={styles.labelRow}>
               <Text style={styles.featuredLabel}>{featured.sponsor.name}</Text>
@@ -80,7 +76,7 @@ export default function AdSlots() {
                 <Text style={[styles.adTagText, { color: featured.accent }]}>AD</Text>
               </View>
             </View>
-            <Text style={styles.featuredCta} numberOfLines={1}>{featured.sponsor.tagline}</Text>
+            <Text style={styles.featuredCta} numberOfLines={2}>{featured.sponsor.tagline}</Text>
           </View>
           <Ionicons name="chevron-forward" size={22} color={featured.accent} />
         </Pressable>
@@ -92,21 +88,21 @@ export default function AdSlots() {
             key={s.key}
             testID={`ad-slot-${s.key}`}
             style={({ pressed }) => [styles.smallCard, { borderColor: s.accent }, pressed && { opacity: 0.92 }]}
-            onPress={() => openSponsor(s.sponsor!.url)}
+            onPress={() => openSponsor(s.sponsor.url)}
           >
-            <View style={[styles.iconBadge, { backgroundColor: s.tint }]}>
-              <Ionicons name={s.icon} size={18} color={s.accent} />
-            </View>
-            <View style={styles.labelRow}>
-              <Text style={styles.smallLabel} numberOfLines={1}>{s.sponsor!.name}</Text>
-              <View style={[styles.adTag, { backgroundColor: s.tint }]}>
-                <Text style={[styles.adTagText, { color: s.accent }]}>AD</Text>
+            <View style={styles.smallImgWrap}>
+              <Image source={{ uri: s.sponsor.image }} style={styles.smallImg} />
+              <View style={[styles.adTagFloat, { backgroundColor: s.accent }]}>
+                <Text style={styles.adTagFloatText}>AD</Text>
               </View>
             </View>
-            <Text style={styles.smallCta} numberOfLines={2}>{s.sponsor!.tagline}</Text>
-            <View style={styles.visitRow}>
-              <Text style={[styles.visitText, { color: s.accent }]}>Visit</Text>
-              <Ionicons name="arrow-forward" size={13} color={s.accent} />
+            <View style={styles.smallBody}>
+              <Text style={styles.smallLabel} numberOfLines={1}>{s.sponsor.name}</Text>
+              <Text style={styles.smallCta} numberOfLines={2}>{s.sponsor.tagline}</Text>
+              <View style={styles.visitRow}>
+                <Text style={[styles.visitText, { color: s.accent }]}>Visit</Text>
+                <Ionicons name="arrow-forward" size={13} color={s.accent} />
+              </View>
             </View>
           </Pressable>
         ))}
@@ -132,23 +128,29 @@ const styles = StyleSheet.create({
   featured: {
     flexDirection: "row", alignItems: "center", gap: spacing.md,
     backgroundColor: colors.surfaceSecondary, borderRadius: radius.lg,
-    padding: spacing.lg, borderWidth: 2, ...shadow.soft,
+    padding: spacing.md, borderWidth: 2, ...shadow.soft,
   },
-  iconBadge: {
-    width: 44, height: 44, borderRadius: radius.md, alignItems: "center", justifyContent: "center",
-  },
-  labelRow: { flexDirection: "row", alignItems: "center", gap: 6, marginTop: spacing.xs },
+  featuredImg: { width: 60, height: 60, borderRadius: radius.md, resizeMode: "cover" },
+  labelRow: { flexDirection: "row", alignItems: "center", gap: 6 },
   featuredLabel: { fontFamily: fonts.display, fontSize: 17, color: colors.onSurface },
-  featuredCta: { fontFamily: fonts.bodyBold, fontSize: 13, color: colors.onSurfaceTertiary, marginTop: 1 },
+  featuredCta: { fontFamily: fonts.bodyBold, fontSize: 13, lineHeight: 18, color: colors.onSurfaceTertiary, marginTop: 2 },
   adTag: { borderRadius: radius.sm, paddingHorizontal: 5, paddingVertical: 1 },
   adTagText: { fontFamily: fonts.bodyExtra, fontSize: 9, letterSpacing: 0.5 },
   smallRow: { flexDirection: "row", flexWrap: "wrap", gap: spacing.md, marginTop: spacing.md },
   smallCard: {
     width: "47%", flexGrow: 1, backgroundColor: colors.surfaceSecondary, borderRadius: radius.lg,
-    padding: spacing.lg, borderWidth: 2, alignItems: "flex-start", gap: 4, ...shadow.soft,
+    borderWidth: 2, overflow: "hidden", ...shadow.soft,
   },
-  smallLabel: { fontFamily: fonts.display, fontSize: 15, color: colors.onSurface, flexShrink: 1 },
+  smallImgWrap: { position: "relative" },
+  smallImg: { width: "100%", height: 84, resizeMode: "cover" },
+  adTagFloat: {
+    position: "absolute", top: spacing.sm, left: spacing.sm,
+    borderRadius: radius.sm, paddingHorizontal: 6, paddingVertical: 2,
+  },
+  adTagFloatText: { fontFamily: fonts.bodyExtra, fontSize: 9, letterSpacing: 0.5, color: "#FFFFFF" },
+  smallBody: { padding: spacing.md, gap: 3 },
+  smallLabel: { fontFamily: fonts.display, fontSize: 15, color: colors.onSurface },
   smallCta: { fontFamily: fonts.bodyBold, fontSize: 12, lineHeight: 16, color: colors.onSurfaceTertiary },
-  visitRow: { flexDirection: "row", alignItems: "center", gap: 3, marginTop: spacing.sm },
+  visitRow: { flexDirection: "row", alignItems: "center", gap: 3, marginTop: spacing.xs },
   visitText: { fontFamily: fonts.bodyExtra, fontSize: 13 },
 });

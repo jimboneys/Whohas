@@ -9,25 +9,15 @@ import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 
 import { colors, fonts, spacing, radius, shadow } from "@/src/theme";
-import { getHistory } from "@/src/history";
 import { suggest } from "@/src/api";
 import { ensureLocation, getSavedCity } from "@/src/location";
 import InstallButton from "@/src/components/InstallButton";
 import AdSlots from "@/src/components/AdSlots";
 
-const EXAMPLES = [
-  "the cheapest eggs",
-  "paper towels on sale",
-  "the lowest milk price",
-  "cheap laundry detergent",
-  "diapers in bulk",
-];
-
 export default function AskScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const [q, setQ] = useState("");
-  const [recent, setRecent] = useState<string[]>([]);
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [city, setCity] = useState("");
   const [locBusy, setLocBusy] = useState(false);
@@ -35,7 +25,6 @@ export default function AskScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      getHistory().then((h) => setRecent(h.slice(0, 4).map((x) => x.q)));
       getSavedCity().then(setCity);
     }, [])
   );
@@ -72,8 +61,6 @@ export default function AskScreen() {
     Keyboard.dismiss();
     router.push({ pathname: "/results", params: { q: framed } });
   };
-
-  const askChip = (phrase: string) => submit(`Who has ${phrase}?`);
 
   const shareApp = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
@@ -166,41 +153,7 @@ export default function AskScreen() {
         </View>
 
         {q.trim().length === 0 ? (
-          <>
-            <Text style={styles.sectionLabel}>TRY ASKING</Text>
-            <View style={styles.chipWrap}>
-              {EXAMPLES.map((e) => (
-                <Pressable
-                  key={e}
-                  testID={`example-chip-${e.replace(/\s+/g, "-")}`}
-                  style={({ pressed }) => [styles.chip, pressed && { backgroundColor: colors.brand }]}
-                  onPress={() => askChip(e)}
-                >
-                  <Text style={styles.chipText}>{e}</Text>
-                </Pressable>
-              ))}
-            </View>
-
-            {recent.length > 0 && (
-              <>
-                <Text style={styles.sectionLabel}>RECENT</Text>
-                {recent.map((r) => (
-                  <Pressable
-                    key={r}
-                    testID={`recent-${r.replace(/\s+/g, "-")}`}
-                    style={styles.recentRow}
-                    onPress={() => submit(r)}
-                  >
-                    <Ionicons name="time-outline" size={18} color={colors.onSurfaceTertiary} />
-                    <Text style={styles.recentText} numberOfLines={1}>{r}</Text>
-                    <Ionicons name="arrow-up-outline" size={16} color="#C9C3B8" style={{ transform: [{ rotate: "45deg" }] }} />
-                  </Pressable>
-                ))}
-              </>
-            )}
-
-            <AdSlots />
-          </>
+          <AdSlots />
         ) : (
           <>
             <Text style={styles.sectionLabel}>SUGGESTIONS</Text>

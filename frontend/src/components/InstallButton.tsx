@@ -10,7 +10,7 @@ import { colors, fonts, spacing, radius, shadow } from "@/src/theme";
 // - Native app or already-installed: renders nothing.
 type Platf = "ios" | "android" | "desktop";
 
-export default function InstallButton() {
+export default function InstallButton({ compact = false }: { compact?: boolean }) {
   const [deferred, setDeferred] = useState<any>(null);
   const [show, setShow] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
@@ -83,14 +83,26 @@ export default function InstallButton() {
 
   return (
     <>
-      <Pressable
-        testID="install-button"
-        style={({ pressed }) => [styles.btn, pressed && { opacity: 0.9 }]}
-        onPress={handlePress}
-      >
-        <Ionicons name="download-outline" size={16} color={colors.onBrand} />
-        <Text style={styles.btnText}>Add to Home Screen</Text>
-      </Pressable>
+      {compact ? (
+        <Pressable
+          testID="install-button"
+          style={({ pressed }) => [styles.compactBtn, pressed && { opacity: 0.85 }]}
+          onPress={handlePress}
+          hitSlop={8}
+        >
+          <Ionicons name="add" size={16} color={colors.brand} />
+          <Text style={styles.compactText}>homepage</Text>
+        </Pressable>
+      ) : (
+        <Pressable
+          testID="install-button"
+          style={({ pressed }) => [styles.btn, pressed && { opacity: 0.9 }]}
+          onPress={handlePress}
+        >
+          <Ionicons name="download-outline" size={16} color={colors.onBrand} />
+          <Text style={styles.btnText}>Add to Home Screen</Text>
+        </Pressable>
+      )}
 
       <Modal visible={helpOpen} transparent animationType="fade" onRequestClose={() => setHelpOpen(false)}>
         <Pressable style={styles.backdrop} onPress={() => setHelpOpen(false)}>
@@ -127,6 +139,12 @@ const styles = StyleSheet.create({
     ...shadow.soft,
   },
   btnText: { fontFamily: fonts.bodyExtra, fontSize: 13, color: colors.onBrand },
+  compactBtn: {
+    flexDirection: "row", alignItems: "center", gap: 2,
+    height: 40, borderRadius: radius.pill, backgroundColor: colors.brandTertiary,
+    paddingHorizontal: spacing.md,
+  },
+  compactText: { fontFamily: fonts.bodyExtra, fontSize: 12.5, color: colors.brand },
   backdrop: {
     flex: 1, backgroundColor: "rgba(0,0,0,0.45)", justifyContent: "center", padding: spacing.xl,
   },

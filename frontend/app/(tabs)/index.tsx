@@ -103,6 +103,7 @@ export default function AskScreen() {
             Who<Text style={{ color: colors.brand }}>Has</Text>
           </Text>
           <View style={{ flex: 1 }} />
+          <InstallButton compact />
           <Pressable
             testID="share-app-button"
             style={({ pressed }) => [styles.shareBtn, pressed && { opacity: 0.85 }]}
@@ -126,8 +127,6 @@ export default function AskScreen() {
             <Text style={styles.locBlockedText}>Location is blocked — tap to open Settings</Text>
           </Pressable>
         )}
-
-        <InstallButton />
 
         <View style={styles.searchCard} testID="search-card">
           <Text style={styles.prefix}>WhoHas the best price on</Text>

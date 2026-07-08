@@ -51,3 +51,19 @@ export async function trending(): Promise<TrendingGroup[]> {
   if (!res.ok) throw new Error(`Request failed (${res.status})`);
   return res.json();
 }
+
+export type Sponsor = { name: string; tagline: string; url: string; image: string };
+export type AdSlot = {
+  key: string;
+  label: string;
+  price: number;
+  featured: boolean;
+  booked: boolean;
+  sponsor?: Sponsor | null;
+};
+
+export async function getAdSlots(): Promise<AdSlot[]> {
+  const res = await fetch(`${BASE}/api/ad-slots`);
+  if (!res.ok) return [];
+  return res.json();
+}

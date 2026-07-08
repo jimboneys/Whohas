@@ -1,11 +1,15 @@
-# WhoHas — Test Credentials
+# WhoHas — Test Credentials & Admin Access
 
-This app has **no authentication / login** (v1 is local-use, no accounts).
+## Ad / Partner Slots admin
+- Endpoint to book/release a slot: `PUT /api/ad-slots/{key}`
+- Header required: `X-Admin-Token: whohas-admin`  (env var `ADMIN_TOKEN`, default `whohas-admin`)
+- Slot keys: deal, sponsor, weekly, flash, local, coupon
+- Book:    body `{"sponsor":{"name":"Aldi","tagline":"...","url":"https://...","image":"<url-or-base64>"}}`
+- Release: body `{"sponsor":null}`
+- Read (public): `GET /api/ad-slots`
 
-- No login screen, no user accounts, no admin panel.
-- Nothing to log in to; all features are accessible without credentials.
+## App auth
+- No user authentication in the app (local-only, no login).
 
-## Environment keys (backend/.env, NOT credentials for login)
-- `EMERGENT_LLM_KEY` — Emergent universal key powering Claude Sonnet 4.6 (configured).
-- `SERPAPI_API_KEY` — optional, for live web grounding (blank = answers from model knowledge).
-- `MONGO_URL`, `DB_NAME` — database connection (managed by platform).
+## LLM
+- Emergent Universal LLM key configured in backend/.env (`EMERGENT_LLM_KEY`). Claude Sonnet 4.6 live.

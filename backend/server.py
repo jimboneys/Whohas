@@ -1,4 +1,4 @@
-from fastapi import FastAPI, APIRouter, HTTPException
+from fastapi import FastAPI, APIRouter, HTTPException, Header
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -509,6 +509,73 @@ async def trending_questions():
     return TRENDING
 
 
+# ---------------- Ad / Partner slots (backend-managed) ----------------
+ADMIN_TOKEN = os.environ.get("ADMIN_TOKEN", "whohas-admin").strip()
+
+DEFAULT_AD_SLOTS = [
+    {"key": "deal", "label": "Deal of the Day", "price": 75, "featured": True},
+    {"key": "sponsor", "label": "Sponsor", "price": 75, "featured": False},
+    {"key": "weekly", "label": "This Week", "price": 75, "featured": False},
+    {"key": "flash", "label": "Flash Sale", "price": 75, "featured": False},
+    {"key": "local", "label": "Local Hero", "price": 75, "featured": False},
+    {"key": "coupon", "label": "Coupon", "price": 75, "featured": False},
+]
+
+
+class Sponsor(BaseModel):
+    name: str = Field(..., min_length=1, max_length=60)
+    tagline: str = Field("", max_length=120)
+    url: str = Field("", max_length=500)
+    image: str = Field("", max_length=1_000_000)  # url or base64 data uri
+
+
+class AdSlot(BaseModel):
+    key: str
+    label: str
+    price: int
+    featured: bool
+    booked: bool
+    sponsor: Optional[Sponsor] = None
+
+
+class BookRequest(BaseModel):
+    sponsor: Optional[Sponsor] = None  # None -> release the slot (mark open)
+
+
+async def seed_ad_slots():
+    for s in DEFAULT_AD_SLOTS:
+        await db.ad_slots.update_one(
+            {"key": s["key"]},
+            {"$setOnInsert": {**s, "booked": False, "sponsor": None}},
+            upsert=True,
+        )
+
+
+@api_router.get("/ad-slots", response_model=List[AdSlot])
+async def get_ad_slots():
+    order = {s["key"]: i for i, s in enumerate(DEFAULT_AD_SLOTS)}
+    docs = await db.ad_slots.find({}, {"_id": 0}).to_list(length=50)
+    docs.sort(key=lambda d: order.get(d.get("key"), 99))
+    return docs
+
+
+@api_router.put("/ad-slots/{key}", response_model=AdSlot)
+async def book_ad_slot(key: str, payload: BookRequest, x_admin_token: str = Header("")):
+    if x_admin_token != ADMIN_TOKEN:
+        raise HTTPException(status_code=401, detail="Invalid admin token")
+    slot = await db.ad_slots.find_one({"key": key}, {"_id": 0})
+    if not slot:
+        raise HTTPException(status_code=404, detail="Slot not found")
+    sponsor = payload.sponsor.model_dump() if payload.sponsor else None
+    await db.ad_slots.update_one(
+        {"key": key},
+        {"$set": {"booked": sponsor is not None, "sponsor": sponsor}},
+    )
+    slot["booked"] = sponsor is not None
+    slot["sponsor"] = sponsor
+    return slot
+
+
 def normalize_query(q: str) -> str:
     ql = q.strip().rstrip("?")
     if re.match(r"^(who|where|which|what|when|how|do|does|is|are|can)\b", ql, re.IGNORECASE):
@@ -549,6 +616,7 @@ async def health():
 
 @app.on_event("startup")
 async def startup():
+    await seed_ad_slots()
     live = bool(SERPAPI_API_KEY and (ANTHROPIC_API_KEY or EMERGENT_LLM_KEY))
     logger.info(f"WhoHas API started. Live mode: {live}")
 

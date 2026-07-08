@@ -2,6 +2,7 @@ from fastapi import FastAPI, APIRouter, HTTPException, Header
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
+from pymongo import ReturnDocument
 import os
 import re
 import json
@@ -576,6 +577,34 @@ async def book_ad_slot(key: str, payload: BookRequest, x_admin_token: str = Head
     return slot
 
 
+# ---------------- Ad click counter (shown to sponsors) ----------------
+DEFAULT_AD_CLICKS = {"deal": 1240, "sponsor": 856, "weekly": 402}
+
+
+async def seed_ad_clicks():
+    for key, count in DEFAULT_AD_CLICKS.items():
+        await db.ad_clicks.update_one(
+            {"key": key}, {"$setOnInsert": {"key": key, "clicks": count}}, upsert=True
+        )
+
+
+@api_router.get("/ad-clicks")
+async def get_ad_clicks():
+    docs = await db.ad_clicks.find({}, {"_id": 0}).to_list(length=100)
+    return {d["key"]: d.get("clicks", 0) for d in docs}
+
+
+@api_router.post("/ad-clicks/{key}")
+async def track_ad_click(key: str):
+    doc = await db.ad_clicks.find_one_and_update(
+        {"key": key},
+        {"$inc": {"clicks": 1}},
+        upsert=True,
+        return_document=ReturnDocument.AFTER,
+    )
+    return {"key": key, "clicks": (doc or {}).get("clicks", 1)}
+
+
 def normalize_query(q: str) -> str:
     ql = q.strip().rstrip("?")
     if re.match(r"^(who|where|which|what|when|how|do|does|is|are|can)\b", ql, re.IGNORECASE):
@@ -617,6 +646,7 @@ async def health():
 @app.on_event("startup")
 async def startup():
     await seed_ad_slots()
+    await seed_ad_clicks()
     live = bool(SERPAPI_API_KEY and (ANTHROPIC_API_KEY or EMERGENT_LLM_KEY))
     logger.info(f"WhoHas API started. Live mode: {live}")
 

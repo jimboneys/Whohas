@@ -67,3 +67,20 @@ export async function getAdSlots(): Promise<AdSlot[]> {
   if (!res.ok) return [];
   return res.json();
 }
+
+export async function getAdClicks(): Promise<Record<string, number>> {
+  const res = await fetch(`${BASE}/api/ad-clicks`);
+  if (!res.ok) return {};
+  return res.json();
+}
+
+export async function trackAdClick(key: string): Promise<number | null> {
+  try {
+    const res = await fetch(`${BASE}/api/ad-clicks/${key}`, { method: "POST" });
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data.clicks ?? null;
+  } catch {
+    return null;
+  }
+}

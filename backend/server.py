@@ -6,6 +6,7 @@ from pymongo import ReturnDocument
 import os
 import re
 import json
+import asyncio
 import logging
 import uuid
 import hashlib
@@ -24,7 +25,9 @@ ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env', override=False)
 
 mongo_url = os.environ['MONGO_URL']
-client = AsyncIOMotorClient(mongo_url)
+# Fast-fail on DB connectivity so a slow/unreachable Atlas node can never hang a
+# request or block app startup long enough to trip Kubernetes health probes.
+client = AsyncIOMotorClient(mongo_url, serverSelectionTimeoutMS=5000)
 db = client[os.environ['DB_NAME']]
 
 SERPAPI_API_KEY = os.environ.get("SERPAPI_API_KEY", "").strip()
@@ -590,8 +593,14 @@ async def seed_ad_clicks():
 
 @api_router.get("/ad-clicks")
 async def get_ad_clicks():
-    docs = await db.ad_clicks.find({}, {"_id": 0}).to_list(length=100)
-    return {d["key"]: d.get("clicks", 0) for d in docs}
+    out = dict(DEFAULT_AD_CLICKS)  # baseline so counts show even pre-seed / on DB hiccup
+    try:
+        docs = await db.ad_clicks.find({}, {"_id": 0}).to_list(length=100)
+        for d in docs:
+            out[d["key"]] = d.get("clicks", 0)
+    except Exception as e:
+        logger.warning(f"get_ad_clicks fell back to defaults: {e}")
+    return out
 
 
 @api_router.post("/ad-clicks/{key}")
@@ -711,10 +720,22 @@ async def health():
     return {"status": "ok", "service": "WhoHas API"}
 
 
+async def _seed_data():
+    # Runs in the background so the app becomes ready immediately. Any DB error
+    # here is non-fatal — the endpoints fall back to sensible defaults.
+    try:
+        await seed_ad_slots()
+        await seed_ad_clicks()
+        logger.info("Seed data ensured.")
+    except Exception as e:
+        logger.warning(f"Startup seeding skipped (non-fatal): {e}")
+
+
 @app.on_event("startup")
 async def startup():
-    await seed_ad_slots()
-    await seed_ad_clicks()
+    # NEVER block or crash startup on a DB call — schedule seeding in the
+    # background so the readiness probe passes immediately even if Atlas is slow.
+    asyncio.create_task(_seed_data())
     live = bool(SERPAPI_API_KEY and (ANTHROPIC_API_KEY or EMERGENT_LLM_KEY))
     logger.info(f"WhoHas API started. Live mode: {live}")
 

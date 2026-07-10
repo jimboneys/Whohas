@@ -5,7 +5,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter, useFocusEffect } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
+import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 
 import { colors, fonts, spacing, radius, shadow } from "@/src/theme";
@@ -97,7 +97,7 @@ export default function AskScreen() {
       >
         <View style={styles.brandRow} testID="home-header">
           <View style={styles.logoBadge}>
-            <Ionicons name="search" size={20} color={colors.onBrand} />
+            <MaterialCommunityIcons name="domino-mask" size={22} color={colors.onBrand} />
           </View>
           <Text style={styles.wordmark}>
             Who<Text style={{ color: colors.brand }}>Has</Text>

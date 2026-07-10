@@ -17,13 +17,16 @@ PROMPT = (
     "The mascot is a friendly, chubby OWL character (owls say 'who' — a playful nod to the app name WhoHas). "
     "Big round expressive eyes, small beak, fluffy feathers, tiny wings. "
     "The owl wears a blue superhero eye-mask across its eyes and a small red cape. "
-    "It holds up a magnifying glass with one wing (a nod to searching for the best price) and "
-    "gives a cheerful thumbs-up / wave with the other wing. "
-    "Bright, playful, approachable, kawaii-friendly proportions, bold clean outlines, vibrant colors, "
-    "mascot logo style like Duolingo. Plain body, NO letters, NO numbers, NO logos, NO text anywhere. "
-    "IMPORTANT: solid warm coral-red (#FF5A5F) background that BLEEDS to all four edges of the square, "
-    "absolutely NO white border, NO margin, NO frame, NO rounded card, NO drop-shadow box. "
-    "Character centered and fully visible, high resolution, app store quality."
+    "It holds up a magnifying glass with one wing and gives a cheerful thumbs-up with the other wing. "
+    "In the BACKGROUND behind the owl, show the brand name spelled exactly 'WhoHas' ONE SINGLE TIME as "
+    "large soft semi-transparent white lettering (a subtle watermark) across the upper part of the image, "
+    "correctly spelled W-h-o-H-a-s as one word, appearing only once, no repeated or duplicate text, "
+    "clearly readable but partly behind the owl. "
+    "Bright, playful, approachable, kawaii-friendly, bold clean outlines, vibrant colors, "
+    "mascot logo style like Duolingo. "
+    "Solid warm coral-red (#FF5A5F) background that BLEEDS to all four edges of the square, completely "
+    "full-bleed, NO white border, NO white corners, NO margin, NO frame, NO rounded card, NO drop shadow box. "
+    "Character centered, high resolution, app store quality."
 )
 
 

@@ -2,57 +2,59 @@ from PIL import Image, ImageDraw
 
 S = 2048  # supersample, downscale to 1024 at the end
 CORAL = (255, 90, 95, 255)
-CORAL_DEEP = (230, 62, 99, 255)
 WHITE = (255, 255, 255, 255)
+CLEAR = (0, 0, 0, 0)
 
 
-def rounded_bg():
+def P(fx, fy):
+    return (int(S * fx), int(S * fy))
+
+
+def background():
     img = Image.new("RGBA", (S, S), CORAL)
-    # subtle vertical highlight at top
-    top = Image.new("RGBA", (S, S), (0, 0, 0, 0))
-    d = ImageDraw.Draw(top)
-    d.rectangle([0, 0, S, int(S * 0.5)], fill=(255, 255, 255, 22))
-    img = Image.alpha_composite(img, top)
-    return img
+    top = Image.new("RGBA", (S, S), CLEAR)
+    ImageDraw.Draw(top).rectangle([0, 0, S, int(S * 0.5)], fill=(255, 255, 255, 22))
+    return Image.alpha_composite(img, top)
 
 
-def superhero_mask():
-    """White domino / superhero mask with eye holes and cat-eye tips (transparent layer)."""
-    m = Image.new("RGBA", (S, S), (0, 0, 0, 0))
+def diamond_emblem():
+    """White diamond crest with a coral superhero mask + magnifier cut into it."""
+    m = Image.new("RGBA", (S, S), CLEAR)
     d = ImageDraw.Draw(m)
-    cx = S // 2
-    # main mask band (wide oval)
-    body = [int(S * 0.18), int(S * 0.36), int(S * 0.82), int(S * 0.62)]
-    d.ellipse(body, fill=WHITE)
-    # outer cat-eye tips (pointed flicks going up-out)
-    d.polygon([(int(S * 0.20), int(S * 0.40)), (int(S * 0.10), int(S * 0.31)),
-               (int(S * 0.30), int(S * 0.39))], fill=WHITE)
-    d.polygon([(int(S * 0.80), int(S * 0.40)), (int(S * 0.90), int(S * 0.31)),
-               (int(S * 0.70), int(S * 0.39))], fill=WHITE)
-    # top-center notch (cut a small dip so it reads as a mask, not glasses)
-    d.polygon([(cx - int(S * 0.05), int(S * 0.36)), (cx + int(S * 0.05), int(S * 0.36)),
-               (cx, int(S * 0.44))], fill=(0, 0, 0, 0))
-    # bottom-center point
-    d.polygon([(cx - int(S * 0.09), int(S * 0.60)), (cx + int(S * 0.09), int(S * 0.60)),
-               (cx, int(S * 0.70))], fill=WHITE)
-    # eye holes (punch transparent almond shapes)
-    ew, eh = int(S * 0.115), int(S * 0.085)
-    lx, rx, ey = int(S * 0.365), int(S * 0.635), int(S * 0.49)
-    d.ellipse([lx - ew, ey - eh, lx + ew, ey + eh], fill=(0, 0, 0, 0))
-    d.ellipse([rx - ew, ey - eh, rx + ew, ey + eh], fill=(0, 0, 0, 0))
+
+    # White diamond (rotated square) crest
+    d.polygon([P(0.5, 0.10), P(0.90, 0.50), P(0.5, 0.90), P(0.10, 0.50)], fill=WHITE)
+
+    # Superhero mask (coral negative space) inside the diamond
+    body = [int(S * 0.28), int(S * 0.40), int(S * 0.72), int(S * 0.58)]
+    d.ellipse(body, fill=CORAL)
+    # cat-eye tips
+    d.polygon([P(0.30, 0.43), P(0.20, 0.35), P(0.40, 0.42)], fill=CORAL)
+    d.polygon([P(0.70, 0.43), P(0.80, 0.35), P(0.60, 0.42)], fill=CORAL)
+    # bottom point
+    d.polygon([P(0.42, 0.56), P(0.58, 0.56), P(0.50, 0.66)], fill=CORAL)
+
+    # eye holes -> reveal the white diamond behind (draw white)
+    ew, eh = int(S * 0.075), int(S * 0.055)
+    lx, rx, ey = int(S * 0.405), int(S * 0.595), int(S * 0.485)
+    d.ellipse([lx - ew, ey - eh, lx + ew, ey + eh], fill=WHITE)
+    d.ellipse([rx - ew, ey - eh, rx + ew, ey + eh], fill=WHITE)
+
+    # magnifying-glass handle off the right lens (coral, nod to "search")
+    hw = int(S * 0.033)
+    x1, y1 = rx + int(ew * 0.6), ey + int(eh * 0.6)
+    x2, y2 = int(S * 0.68), int(S * 0.66)
+    d.line([(x1, y1), (x2, y2)], fill=CORAL, width=hw)
+    d.ellipse([x2 - hw // 2, y2 - hw // 2, x2 + hw // 2, y2 + hw // 2], fill=CORAL)
     return m
 
 
-def build(full_bleed=True):
-    bg = rounded_bg()
-    mask = superhero_mask()
-    out = Image.alpha_composite(bg, mask)
+def build():
+    out = Image.alpha_composite(background(), diamond_emblem())
     return out.resize((1024, 1024), Image.LANCZOS)
 
 
 if __name__ == "__main__":
-    import sys
-    dest = sys.argv[1] if len(sys.argv) > 1 else "/app/frontend/assets/images/icon.png"
     icon = build()
     icon.save("/app/frontend/assets/images/icon.png")
     icon.save("/app/frontend/assets/images/adaptive-icon.png")

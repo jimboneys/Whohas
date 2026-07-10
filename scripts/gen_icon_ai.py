@@ -13,14 +13,17 @@ load_dotenv("/app/backend/.env")
 ASSETS = Path("/app/frontend/assets/images")
 
 PROMPT = (
-    "A modern mobile app icon, flat vector illustration style. "
-    "A bold DIAMOND-SHAPED (rotated square) superhero emblem / crest, perfectly centered. "
-    "Inside the diamond: a white superhero domino eye-mask fused with a magnifying glass "
-    "(the right eye of the mask is a magnifier lens with a small handle) — a clever nod to "
-    "searching for the best price. "
-    "Solid warm coral-red background (#FF5A5F) filling the entire square, full-bleed, no rounded corners. "
-    "White and soft cream emblem with subtle depth, crisp clean geometric shapes, playful and friendly, "
-    "minimal, no text, no letters, high resolution, centered composition, symmetrical, app store quality."
+    "A cute cartoon MASCOT character app icon, modern flat illustration style with soft shading. "
+    "The mascot is a friendly, chubby OWL character (owls say 'who' — a playful nod to the app name WhoHas). "
+    "Big round expressive eyes, small beak, fluffy feathers, tiny wings. "
+    "The owl wears a blue superhero eye-mask across its eyes and a small red cape. "
+    "It holds up a magnifying glass with one wing (a nod to searching for the best price) and "
+    "gives a cheerful thumbs-up / wave with the other wing. "
+    "Bright, playful, approachable, kawaii-friendly proportions, bold clean outlines, vibrant colors, "
+    "mascot logo style like Duolingo. Plain body, NO letters, NO numbers, NO logos, NO text anywhere. "
+    "IMPORTANT: solid warm coral-red (#FF5A5F) background that BLEEDS to all four edges of the square, "
+    "absolutely NO white border, NO margin, NO frame, NO rounded card, NO drop-shadow box. "
+    "Character centered and fully visible, high resolution, app store quality."
 )
 
 

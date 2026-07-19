@@ -135,27 +135,24 @@ export default function AskScreen() {
         <QuickPicks onPick={(item) => submit(item)} />
 
         <View style={styles.searchCard} testID="search-card">
-          <Text style={styles.prefix}>WhoHas the best price on</Text>
-          <View style={styles.inputRow}>
-            <TextInput
-              testID="ask-input"
-              style={styles.input}
-              placeholder="eggs…"
-              placeholderTextColor="#B5AFA5"
-              value={q}
-              onChangeText={setQ}
-              onSubmitEditing={() => submit(q)}
-              returnKeyType="search"
-              multiline
-            />
-            <Pressable
-              testID="ask-submit-button"
-              style={({ pressed }) => [styles.askBtn, pressed && { opacity: 0.85 }]}
-              onPress={() => submit(q)}
-            >
-              <Ionicons name="arrow-forward" size={24} color={colors.onBrand} />
-            </Pressable>
-          </View>
+          <Ionicons name="search" size={20} color="#B5AFA5" />
+          <TextInput
+            testID="ask-input"
+            style={styles.input}
+            placeholder="Search groceries…"
+            placeholderTextColor="#B5AFA5"
+            value={q}
+            onChangeText={setQ}
+            onSubmitEditing={() => submit(q)}
+            returnKeyType="search"
+          />
+          <Pressable
+            testID="ask-submit-button"
+            style={({ pressed }) => [styles.askBtn, pressed && { opacity: 0.85 }]}
+            onPress={() => submit(q)}
+          >
+            <Ionicons name="arrow-forward" size={20} color={colors.onBrand} />
+          </Pressable>
         </View>
 
         {q.trim().length === 0 ? (
@@ -214,17 +211,18 @@ const styles = StyleSheet.create({
   modeText: { fontFamily: fonts.bodyBold, fontSize: 13.5, color: colors.onSurfaceTertiary },
   modeTextActive: { color: colors.onBrand },
   searchCard: {
-    flexDirection: "column", backgroundColor: colors.surfaceSecondary,
-    borderRadius: radius.lg, padding: spacing.lg, gap: spacing.xs,
+    flexDirection: "row", alignItems: "center", gap: spacing.sm,
+    backgroundColor: colors.surfaceSecondary,
+    borderRadius: radius.pill, paddingLeft: spacing.lg, paddingRight: spacing.xs, paddingVertical: spacing.xs,
     borderWidth: 1, borderColor: colors.border, ...shadow.card,
   },
-  inputRow: { flexDirection: "row", alignItems: "center" },
   input: {
-    flex: 1, fontFamily: fonts.bodyBold, fontSize: 17, lineHeight: 22, color: colors.onSurface,
-    paddingVertical: spacing.md, maxHeight: 110,
+    flex: 1, fontFamily: fonts.bodyBold, fontSize: 16, color: colors.onSurface,
+    paddingVertical: spacing.sm,
   },
-  prefix: {
-    fontFamily: fonts.bodyExtra, fontSize: 14, lineHeight: 20, color: colors.brand,
+  askBtn: {
+    width: 40, height: 40, borderRadius: radius.pill, backgroundColor: colors.brand,
+    alignItems: "center", justifyContent: "center",
   },
   locChip: {
     flexDirection: "row", alignItems: "center", gap: 6, alignSelf: "flex-start",
@@ -235,10 +233,6 @@ const styles = StyleSheet.create({
   locBlockedText: {
     fontFamily: fonts.bodyBold, fontSize: 12.5, color: colors.brand,
     marginTop: -spacing.sm, marginBottom: spacing.md,
-  },
-  askBtn: {
-    width: 52, height: 52, borderRadius: radius.md, backgroundColor: colors.brand,
-    alignItems: "center", justifyContent: "center", marginLeft: spacing.sm,
   },
   sectionLabel: {
     fontFamily: fonts.bodyExtra, fontSize: 12, letterSpacing: 1, color: colors.onSurfaceTertiary,

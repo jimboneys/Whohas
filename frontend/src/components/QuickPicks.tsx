@@ -52,9 +52,9 @@ const styles = StyleSheet.create({
   },
   row: { gap: spacing.md, paddingRight: spacing.md },
   box: {
-    width: 84, height: 84, borderRadius: radius.lg,
-    alignItems: "center", justifyContent: "center", gap: 4, ...shadow.soft,
+    width: 66, height: 66, borderRadius: radius.md,
+    alignItems: "center", justifyContent: "center", gap: 2, ...shadow.soft,
   },
-  emoji: { fontSize: 28 },
-  boxLabel: { fontFamily: fonts.bodyExtra, fontSize: 12 },
+  emoji: { fontSize: 22 },
+  boxLabel: { fontFamily: fonts.bodyExtra, fontSize: 10.5 },
 });

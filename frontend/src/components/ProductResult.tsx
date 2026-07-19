@@ -15,13 +15,19 @@ export default function ProductResult({ product }: { product: ProductCardData })
   const savings = highest.price - best.price;
   const pct = highest.price > 0 ? Math.round((savings / highest.price) * 100) : 0;
 
+  // Request a crisp, retina-resolution photo when the source is an Unsplash URL.
+  const hiRes = product.image
+    ? product.image.replace(/([?&])w=\d+/, "$1w=1080").replace(/([?&])q=\d+/, "$1q=90")
+    : product.image;
+
   return (
     <View style={styles.card} testID="product-result">
       <Image
-        source={{ uri: product.image }}
+        source={{ uri: hiRes }}
         style={styles.image}
         contentFit="cover"
-        transition={200}
+        transition={250}
+        cachePolicy="memory-disk"
       />
       <View style={styles.body}>
         <Text style={styles.name} testID="product-name" numberOfLines={2}>
@@ -81,7 +87,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.lg,
     ...shadow.card,
   },
-  image: { width: "100%", height: 170, backgroundColor: colors.surfaceTertiary },
+  image: { width: "100%", height: 220, backgroundColor: colors.surfaceTertiary },
   body: { padding: spacing.lg },
   name: { fontFamily: fonts.display, fontSize: 20, color: colors.onSurface },
   bestBox: {

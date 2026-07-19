@@ -14,6 +14,8 @@ import { ensureLocation, getSavedCity } from "@/src/location";
 import InstallButton from "@/src/components/InstallButton";
 import AdSlots from "@/src/components/AdSlots";
 import LocalSpecial from "@/src/components/LocalSpecial";
+import QuickPicks from "@/src/components/QuickPicks";
+import SponsorStrip from "@/src/components/SponsorStrip";
 
 export default function AskScreen() {
   const insets = useSafeAreaInsets();
@@ -127,6 +129,10 @@ export default function AskScreen() {
             <Text style={styles.locBlockedText}>Location is blocked — tap to open Settings</Text>
           </Pressable>
         )}
+
+        <SponsorStrip />
+
+        <QuickPicks onPick={(item) => submit(item)} />
 
         <View style={styles.searchCard} testID="search-card">
           <Text style={styles.prefix}>WhoHas the best price on</Text>

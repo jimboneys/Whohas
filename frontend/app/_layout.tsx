@@ -7,8 +7,12 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { useFonts } from "expo-font";
 
 import { useIconFonts } from "@/src/hooks/use-icon-fonts";
+import { setupPWA } from "@/src/pwa";
 
 LogBox.ignoreAllLogs(true);
+
+// Register PWA manifest + service worker on web (no-op on native).
+setupPWA();
 
 // Keep the native splash visible from cold start until icon fonts register.
 SplashScreen.preventAutoHideAsync();

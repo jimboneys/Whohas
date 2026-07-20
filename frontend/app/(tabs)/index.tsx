@@ -16,6 +16,7 @@ import AdSlots from "@/src/components/AdSlots";
 import LocalSpecial from "@/src/components/LocalSpecial";
 import QuickPicks from "@/src/components/QuickPicks";
 import SponsorStrip from "@/src/components/SponsorStrip";
+import PrivacyBadge from "@/src/components/PrivacyBadge";
 
 export default function AskScreen() {
   const insets = useSafeAreaInsets();
@@ -178,8 +179,11 @@ export default function AskScreen() {
           </>
         )}
         <View style={styles.footer}>
-          <Ionicons name="sparkles" size={12} color="#C9C3B8" />
-          <Text style={styles.footerText}>Powered by Claude Sonnet 4.6</Text>
+          <PrivacyBadge />
+          <View style={styles.footerRow}>
+            <Ionicons name="sparkles" size={12} color="#C9C3B8" />
+            <Text style={styles.footerText}>Powered by Claude Sonnet 4.6</Text>
+          </View>
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -252,8 +256,9 @@ const styles = StyleSheet.create({
   },
   recentText: { flex: 1, fontFamily: fonts.bodyBold, fontSize: 15, color: colors.onSurface },
   footer: {
-    flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6,
-    marginTop: spacing.xxxl, opacity: 0.8,
+    alignItems: "center", gap: spacing.md,
+    marginTop: spacing.xxxl,
   },
+  footerRow: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, opacity: 0.8 },
   footerText: { fontFamily: fonts.bodyBold, fontSize: 12, color: "#A8A29A" },
 });

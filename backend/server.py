@@ -448,6 +448,9 @@ async def ask(payload: AskRequest):
 
     # Make the answer local: fold the user's city into the query so both the
     # web search and Claude (and the offline engine) resolve nearby results.
+    # NOTE: we keep the pre-location question for logging so a user's city is
+    # never persisted (privacy: no data harvesting).
+    stored_question = question
     loc = (payload.location or "").strip()
     if loc and loc.lower() not in question.lower() and not re.search(r"near me|nearby", question, re.I):
         question = f"{question} in {loc}"
@@ -482,7 +485,7 @@ async def ask(payload: AskRequest):
     qid = str(uuid.uuid4())
     product = build_product(question)
     await db.queries.insert_one({
-        "id": qid, "question": question, "summary": synth.get("summary", ""),
+        "id": qid, "question": stored_question, "summary": synth.get("summary", ""),
         "demo": demo, "sources_count": len(results), "created_at": now,
     })
     return AskResponse(

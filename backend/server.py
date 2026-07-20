@@ -63,6 +63,10 @@ def rate_limit(request: Request, bucket: str, max_calls: int, window_s: int = 60
     if len(dq) >= max_calls:
         raise HTTPException(status_code=429, detail="Too many requests. Please slow down.")
     dq.append(now)
+    # Bound memory: periodically reap stale/empty buckets.
+    if len(_rl_store) > 2000:
+        for k in [k for k, v in list(_rl_store.items()) if not v or v[-1] <= now - window_s]:
+            _rl_store.pop(k, None)
 
 app = FastAPI()
 api_router = APIRouter(prefix="/api")
@@ -848,8 +852,8 @@ async def stripe_webhook(request: Request):
     try:
         event = await stripe.handle_webhook(body, sig)
     except Exception as e:
-        logger.warning(f"Stripe webhook error: {e}")
-        return {"received": False}
+        logger.warning(f"Stripe webhook rejected (bad signature/parse): {e}")
+        raise HTTPException(status_code=400, detail="Invalid webhook signature")
     if event.payment_status == "paid" and event.session_id:
         tx = await db.payment_transactions.find_one({"session_id": event.session_id})
         if tx and not tx.get("processed"):

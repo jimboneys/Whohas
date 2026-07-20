@@ -125,3 +125,38 @@ export async function likeComment(id: string): Promise<number | null> {
     return null;
   }
 }
+
+// ---------------- WhoHas Pro ----------------
+export type ProEntitlement = { pro: boolean; plan?: string | null; expires_at?: string | null };
+
+export async function getProEntitlement(deviceId: string): Promise<ProEntitlement> {
+  try {
+    const res = await fetch(`${BASE}/api/pro/entitlement?device_id=${encodeURIComponent(deviceId)}`);
+    if (!res.ok) return { pro: false };
+    return res.json();
+  } catch {
+    return { pro: false };
+  }
+}
+
+export async function createProCheckout(
+  plan: "yearly" | "monthly",
+  deviceId: string,
+  originUrl: string
+): Promise<{ url: string; session_id: string }> {
+  const res = await fetch(`${BASE}/api/pro/checkout`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ plan, device_id: deviceId, origin_url: originUrl }),
+  });
+  if (!res.ok) throw new Error(`Checkout failed (${res.status})`);
+  return res.json();
+}
+
+export async function getProStatus(
+  sessionId: string
+): Promise<{ payment_status: string; status: string; pro: boolean; plan: string; expires_at?: string | null }> {
+  const res = await fetch(`${BASE}/api/pro/status/${sessionId}`);
+  if (!res.ok) throw new Error(`Status failed (${res.status})`);
+  return res.json();
+}

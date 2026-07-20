@@ -1,4 +1,4 @@
-from fastapi import FastAPI, APIRouter, HTTPException, Header
+from fastapi import FastAPI, APIRouter, HTTPException, Header, Request
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -11,7 +11,7 @@ import logging
 import uuid
 import hashlib
 from pathlib import Path
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from typing import List, Optional, Dict, Any
 
 import requests
@@ -683,6 +683,147 @@ async def like_comment(comment_id: str):
     if not doc:
         raise HTTPException(status_code=404, detail="Comment not found")
     return {"id": comment_id, "likes": doc.get("likes", 1)}
+
+
+# ---------------- WhoHas Pro (Stripe checkout) ----------------
+from emergentintegrations.payments.stripe.checkout import StripeCheckout, CheckoutSessionRequest
+
+STRIPE_API_KEY = os.environ.get("STRIPE_API_KEY", "")
+
+# Server-side fixed plans — NEVER trust an amount sent by the client.
+PRO_PLANS = {
+    "yearly": {"amount": 60.00, "days": 365, "label": "Pro Yearly"},
+    "monthly": {"amount": 6.99, "days": 30, "label": "Pro Monthly"},
+}
+
+
+class ProCheckoutRequest(BaseModel):
+    plan: str
+    device_id: str = Field(..., min_length=6, max_length=100)
+    origin_url: str = Field(..., max_length=300)
+
+
+def _stripe(request: Request) -> StripeCheckout:
+    webhook_url = str(request.base_url).rstrip("/") + "/api/webhook/stripe"
+    return StripeCheckout(api_key=STRIPE_API_KEY, webhook_url=webhook_url)
+
+
+async def _grant_pro(device_id: str, plan: str):
+    days = PRO_PLANS[plan]["days"]
+    now = datetime.now(timezone.utc)
+    existing = await db.entitlements.find_one({"device_id": device_id})
+    base = now
+    if existing and existing.get("expires_at"):
+        try:
+            cur = datetime.fromisoformat(existing["expires_at"])
+            if cur > now:
+                base = cur  # extend from current expiry
+        except Exception:
+            pass
+    expires_at = (base + timedelta(days=days)).isoformat()
+    await db.entitlements.update_one(
+        {"device_id": device_id},
+        {"$set": {"device_id": device_id, "plan": plan, "expires_at": expires_at, "updated_at": now.isoformat()}},
+        upsert=True,
+    )
+    return expires_at
+
+
+@api_router.post("/pro/checkout")
+async def pro_checkout(payload: ProCheckoutRequest, request: Request):
+    plan = payload.plan
+    if plan not in PRO_PLANS:
+        raise HTTPException(status_code=400, detail="Invalid plan")
+    amount = PRO_PLANS[plan]["amount"]
+    origin = payload.origin_url.rstrip("/")
+    success_url = f"{origin}/pro?session_id={{CHECKOUT_SESSION_ID}}"
+    cancel_url = f"{origin}/pro"
+    stripe = _stripe(request)
+    req = CheckoutSessionRequest(
+        amount=amount,
+        currency="usd",
+        success_url=success_url,
+        cancel_url=cancel_url,
+        metadata={"plan": plan, "device_id": payload.device_id, "product": "whohas_pro"},
+    )
+    session = await stripe.create_checkout_session(req)
+    await db.payment_transactions.insert_one({
+        "session_id": session.session_id,
+        "device_id": payload.device_id,
+        "plan": plan,
+        "amount": amount,
+        "currency": "usd",
+        "payment_status": "initiated",
+        "status": "open",
+        "processed": False,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    })
+    return {"url": session.url, "session_id": session.session_id}
+
+
+@api_router.get("/pro/status/{session_id}")
+async def pro_status(session_id: str, request: Request):
+    tx = await db.payment_transactions.find_one({"session_id": session_id})
+    if not tx:
+        raise HTTPException(status_code=404, detail="Session not found")
+    stripe = _stripe(request)
+    result = await stripe.get_checkout_status(session_id)
+    await db.payment_transactions.update_one(
+        {"session_id": session_id},
+        {"$set": {"payment_status": result.payment_status, "status": result.status}},
+    )
+    pro = False
+    expires_at = None
+    # Idempotent grant: only once, only when actually paid.
+    if result.payment_status == "paid" and not tx.get("processed"):
+        expires_at = await _grant_pro(tx["device_id"], tx["plan"])
+        await db.payment_transactions.update_one(
+            {"session_id": session_id}, {"$set": {"processed": True}}
+        )
+        pro = True
+    elif tx.get("processed"):
+        ent = await db.entitlements.find_one({"device_id": tx["device_id"]})
+        expires_at = ent.get("expires_at") if ent else None
+        pro = True
+    return {
+        "payment_status": result.payment_status,
+        "status": result.status,
+        "plan": tx["plan"],
+        "pro": pro,
+        "expires_at": expires_at,
+    }
+
+
+@api_router.get("/pro/entitlement")
+async def pro_entitlement(device_id: str):
+    ent = await db.entitlements.find_one({"device_id": device_id}, {"_id": 0})
+    if not ent or not ent.get("expires_at"):
+        return {"pro": False, "plan": None, "expires_at": None}
+    try:
+        active = datetime.fromisoformat(ent["expires_at"]) > datetime.now(timezone.utc)
+    except Exception:
+        active = False
+    return {"pro": active, "plan": ent.get("plan"), "expires_at": ent.get("expires_at")}
+
+
+@api_router.post("/webhook/stripe")
+async def stripe_webhook(request: Request):
+    stripe = _stripe(request)
+    body = await request.body()
+    sig = request.headers.get("Stripe-Signature", "")
+    try:
+        event = await stripe.handle_webhook(body, sig)
+    except Exception as e:
+        logger.warning(f"Stripe webhook error: {e}")
+        return {"received": False}
+    if event.payment_status == "paid" and event.session_id:
+        tx = await db.payment_transactions.find_one({"session_id": event.session_id})
+        if tx and not tx.get("processed"):
+            await _grant_pro(tx["device_id"], tx["plan"])
+            await db.payment_transactions.update_one(
+                {"session_id": event.session_id}, {"$set": {"processed": True, "payment_status": "paid"}}
+            )
+    return {"received": True}
 
 
 def normalize_query(q: str) -> str:

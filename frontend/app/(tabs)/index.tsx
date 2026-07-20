@@ -144,7 +144,7 @@ export default function AskScreen() {
             <Ionicons name="ribbon" size={15} color={colors.onSuccess} />
             <Text style={styles.proActiveText}>WhoHas Pro active · ad-free</Text>
           </View>
-        ) : (
+        ) : Platform.OS === "web" ? (
           <Pressable style={styles.goProBanner} onPress={() => router.push("/pro")} testID="go-pro-banner">
             <View style={styles.goProIcon}>
               <Ionicons name="ribbon" size={16} color={colors.brand} />
@@ -155,7 +155,7 @@ export default function AskScreen() {
             </View>
             <Ionicons name="chevron-forward" size={20} color={colors.onBrand} />
           </Pressable>
-        )}
+        ) : null}
 
         {!pro && <SponsorStrip />}
 

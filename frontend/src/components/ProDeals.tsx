@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, Pressable, Image } from "react-native";
+import { View, Text, StyleSheet, Pressable, Image, Platform } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import * as WebBrowser from "expo-web-browser";
@@ -58,7 +58,7 @@ export default function ProDeals({ pro, onUpgrade }: { pro: boolean; onUpgrade: 
         ))}
       </View>
 
-      {!pro ? (
+      {!pro && Platform.OS === "web" ? (
         <Pressable style={styles.unlock} onPress={onUpgrade} testID="unlock-pro-deals">
           <Ionicons name="ribbon" size={16} color={colors.onBrand} />
           <Text style={styles.unlockText}>Unlock Pro Deals</Text>

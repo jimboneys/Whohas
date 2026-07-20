@@ -133,7 +133,7 @@ export default function ProScreen() {
           ))}
         </View>
 
-        {!pro && (
+        {!pro && Platform.OS === "web" && (
           <>
             {PLANS.map((pl) => {
               const active = selected === pl.key;
@@ -193,6 +193,17 @@ export default function ProScreen() {
               Cancel anytime.
             </Text>
           </>
+        )}
+
+        {!pro && Platform.OS !== "web" && (
+          <View style={styles.webOnlyBox} testID="pro-web-only">
+            <Ionicons name="globe-outline" size={22} color={colors.brand} />
+            <Text style={styles.webOnlyTitle}>Manage Pro on the web</Text>
+            <Text style={styles.webOnlyText}>
+              WhoHas Pro subscriptions are handled on our website. Open WhoHas in your
+              browser to upgrade — your Pro perks then sync back to this device.
+            </Text>
+          </View>
         )}
       </ScrollView>
     </View>
@@ -259,4 +270,13 @@ const styles = StyleSheet.create({
     textAlign: "center", marginTop: spacing.lg,
   },
   link: { fontFamily: fonts.bodyExtra, color: colors.brand },
+  webOnlyBox: {
+    backgroundColor: colors.surfaceSecondary, borderRadius: radius.lg, padding: spacing.lg,
+    alignItems: "center", gap: spacing.sm, borderWidth: 1, borderColor: colors.border,
+  },
+  webOnlyTitle: { fontFamily: fonts.display, fontSize: 17, color: colors.onSurface },
+  webOnlyText: {
+    fontFamily: fonts.body, fontSize: 13.5, lineHeight: 20, color: colors.onSurfaceTertiary,
+    textAlign: "center",
+  },
 });

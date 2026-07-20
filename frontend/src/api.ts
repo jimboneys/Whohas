@@ -52,6 +52,32 @@ export async function trending(): Promise<TrendingGroup[]> {
   return res.json();
 }
 
+// ---------------- Grocery basket ----------------
+export type BasketItem = {
+  name: string;
+  image: string;
+  prices: Record<string, number>;
+  best_store: string;
+  best_price: number;
+};
+export type StoreTotal = { store: string; total: number };
+export type BasketResponse = {
+  items: BasketItem[];
+  totals: StoreTotal[];
+  cheapest: { store: string; total: number; savings: number } | null;
+  best_mix_total: number;
+};
+
+export async function computeBasket(items: string[]): Promise<BasketResponse> {
+  const res = await fetch(`${BASE}/api/basket`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ items }),
+  });
+  if (!res.ok) throw new Error(`Basket failed (${res.status})`);
+  return res.json();
+}
+
 export type Sponsor = { name: string; tagline: string; url: string; image: string };
 export type AdSlot = {
   key: string;

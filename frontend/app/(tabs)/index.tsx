@@ -18,6 +18,7 @@ import QuickPicks from "@/src/components/QuickPicks";
 import SponsorStrip from "@/src/components/SponsorStrip";
 import PrivacyBadge from "@/src/components/PrivacyBadge";
 import ProDeals from "@/src/components/ProDeals";
+import InstallBanner from "@/src/components/InstallBanner";
 import { TermsGate } from "@/src/components/Legal";
 import { getDeviceId } from "@/src/pro";
 
@@ -122,6 +123,8 @@ export default function AskScreen() {
           </Pressable>
         </View>
         <Text style={styles.tagline}>Hey 👋 what are you looking for today?</Text>
+
+        <InstallBanner />
 
         <Pressable style={styles.locChip} testID="location-chip" onPress={handleLocation}>
           <Ionicons name="location" size={14} color={colors.brand} />

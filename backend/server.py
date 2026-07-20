@@ -463,6 +463,42 @@ def build_product(question: str) -> Optional[Dict[str, Any]]:
     return {"name": name[:48] or "Product", "image": image, "stores": stores}
 
 
+# ---------------- Grocery basket (cheapest across stores) ----------------
+BASKET_STORES = ["Walmart", "Target", "Kroger", "Amazon"]
+
+
+def _match_shopping_topic(name: str) -> Optional[str]:
+    nl = name.lower()
+    for topic, (keys, _n) in KB["shopping"]["topics"].items():
+        if any(k in nl for k in keys):
+            return topic
+    return None
+
+
+def price_item(name: str) -> Dict[str, Any]:
+    """Deterministic per-store pricing for a single grocery item."""
+    topic = _match_shopping_topic(name)
+    base = SHOPPING_BASES.get(topic, 4.49)
+    image = SHOPPING_IMAGES.get(topic, GENERIC_PRODUCT_IMG)
+    seed = topic or name.strip().lower()
+    prices: Dict[str, float] = {}
+    for store in BASKET_STORES:
+        h = int(hashlib.md5(f"{seed}|{store}".encode()).hexdigest(), 16)
+        factor = 0.90 + (h % 25) / 100.0  # 0.90 – 1.14
+        raw = base * factor
+        price = round(raw) - 0.01 if base >= 10 else round(raw, 2)
+        prices[store] = price
+    best_store = min(prices, key=prices.get)
+    display = " ".join(w.capitalize() for w in name.strip().split())[:48] or "Item"
+    return {
+        "name": display,
+        "image": image,
+        "prices": prices,
+        "best_store": best_store,
+        "best_price": prices[best_store],
+    }
+
+
 # ---------------- Routes ----------------
 @api_router.get("/")
 async def root():
@@ -523,6 +559,35 @@ async def ask(payload: AskRequest, request: Request):
         direct_answer=(items[0].name if items else ""),
         items=items, product=product, demo=demo, sources_count=len(results), created_at=now,
     )
+
+
+class BasketRequest(BaseModel):
+    items: List[str]
+
+
+@api_router.post("/basket")
+async def basket(payload: BasketRequest, request: Request):
+    rate_limit(request, "basket", max_calls=40, window_s=60)
+    names = [n.strip() for n in payload.items if n and n.strip()][:40]
+    if not names:
+        return {"items": [], "totals": [], "cheapest": None, "best_mix_total": 0.0}
+
+    items = [price_item(n) for n in names]
+    totals = []
+    for store in BASKET_STORES:
+        total = round(sum(it["prices"][store] for it in items), 2)
+        totals.append({"store": store, "total": total})
+    totals.sort(key=lambda x: x["total"])
+
+    cheapest = totals[0]
+    savings = round(totals[-1]["total"] - cheapest["total"], 2)
+    best_mix_total = round(sum(it["best_price"] for it in items), 2)
+    return {
+        "items": items,
+        "totals": totals,
+        "cheapest": {"store": cheapest["store"], "total": cheapest["total"], "savings": savings},
+        "best_mix_total": best_mix_total,
+    }
 
 
 TRENDING = [

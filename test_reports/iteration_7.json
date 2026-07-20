@@ -1,0 +1,50 @@
+{
+  "summary": "Tested new /api/basket endpoint (backend, 7/7 pytest PASS) and the 'My List' tab (frontend). Backend basket API works exactly as specified — totals sorted ascending, cheapest matches totals[0] with correct savings, best_mix_total <= cheapest.total, empty items -> empty structure, whitespace stripped, pricing deterministic, unknown items priced against fallback, no rate-limit trip on 10 sequential calls. Frontend My List UI works for add-via-input, add-via-suggested-chip (Eggs/Milk/Bananas/Toilet paper), basket-summary shows CHEAPEST BASKET Walmart $21.91 with 'Save $1.65 vs the priciest store', store-compare renders all 4 stores with winner (Walmart 🏆) highlighted in green, item rows show best-price/best-store, remove-item and clear-list-button both work, home Ask screen still loads and PWA InstallBanner correctly hidden in preview (no beforeinstallprompt). Terms gate ('I Agree & Continue', testID terms-accept) dismissed correctly. CRITICAL BUG: list does NOT persist across full page reload — see rca_of_issue. It DOES persist across in-app tab navigation. Regression: home Ask still loads OK.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {
+        "component": "ListScreen (list.tsx)",
+        "issue": "AsyncStorage grocery list is wiped to [] on every full page reload / cold start because the save-on-change useEffect fires with items=[] BEFORE useFocusEffect's getList().then(setItems) resolves. Reproduced: added Eggs+Milk, verified localStorage['whohas_grocery_list']='\"[\\\"Milk\\\",\\\"Eggs\\\"]\"', then goto /list -> localStorage becomes '\"[]\"' and UI shows 'Your list is empty'. Persistence claim in PRD is broken for the cold-start / hard-reload case (works for in-app tab-press because component stays mounted).",
+        "testID": "list-empty / item-row-*",
+        "priority": "HIGH"
+      }
+    ],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": [
+      {"component": "react-native-web styles", "issue": "'shadow*' style props are deprecated on RN web; use 'boxShadow'. Fires many times per navigation. Reference: /app/frontend/src/theme.ts (shadow.card) — every screen using shadow.card is affected."},
+      {"component": "react-native-web pointerEvents", "issue": "props.pointerEvents is deprecated on RN web; use style.pointerEvents. Warning fires on every screen render."},
+      {"component": "expo-image / Image", "issue": "'Image: style.resizeMode is deprecated. Please use props.resizeMode.' — fires from a component that sets resizeMode inside a StyleSheet."}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_basket.py",
+    "/app/test_reports/pytest/pytest_results.xml"
+  ],
+  "action_items": [
+    "Fix /app/frontend/app/(tabs)/list.tsx persistence race: gate the save-on-change effect behind a 'loaded' flag that is only set to true after the FIRST getList() resolves in useFocusEffect. Something like: const [loaded, setLoaded] = useState(false); in useFocusEffect: getList().then(v => { setItems(v); setLoaded(true); }); in useEffect: if (!loaded) return; then saveList(items). Without this the initial items=[] render overwrites the persisted list on every cold start.",
+    "Consider double-encoding cleanup: storage.setItem JSON.stringifies its value; grocery.ts also JSON.stringifies before calling setItem, so the value is stored double-encoded (works because it round-trips symmetrically, but wasteful and confusing). Non-blocking.",
+    "Address RN-web deprecations (shadow*, pointerEvents, Image.resizeMode) at some point — noisy in the console but non-blocking."
+  ],
+  "critical_code_review_comments": [
+    "server.py:568 /api/basket — implementation is clean, deterministic, and matches the frontend BasketResponse type in api.ts. totals are sorted ascending, savings computed correctly against priciest, best_mix_total is the per-item min-price sum (mathematically always <= cheapest single-store total).",
+    "server.py:571 the [:40] cap on items matches frontend saveList's items.slice(0,40) — good symmetry, safe against abuse.",
+    "list.tsx:36-54 the useEffect(saveList) races the useFocusEffect(getList) on mount — see ui_bugs. Guard with a 'loaded' flag.",
+    "list.tsx:80 availableChips filter uses toLowerCase compare — matches the addItem dedup, good.",
+    "grocery.ts:16 saveList silently truncates to 40 items — matches server cap. Good."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_basket.py (new — 7 tests, all pass)",
+    "/app/test_reports/pytest/pytest_results.xml (regenerated for basket suite)"
+  ],
+  "success_rate": {"backend": "100% (7/7 for /api/basket; prior 17/17 pro+security and 12/12 api regression suites unchanged)", "frontend": "6/7 major flows PASS — add via input, add via chips, basket-summary, store-compare, remove-item, clear-list, home-regression all PASS; ONLY 'persist across tab navigation' FAILS on cold start/hard reload (works via in-app tab tap)."},
+  "seed_data_creation": "None persisted. Backend tests only exercise /api/basket which is stateless — no DB writes.",
+  "retest_needed": true,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "To reproduce persistence bug: 1) open preview URL, dismiss terms gate, 2) go to /list, 3) tap 'Eggs' chip, wait ~2s, 4) check DevTools Application > Local Storage — key 'whohas_grocery_list' should be a JSON-encoded '[\"Eggs\"]', 5) hard-reload the page (F5 or page.goto same URL) — the key becomes '\"[]\"' and the UI shows empty state. The overwrite happens because the useEffect(items) fires on mount with items=[] before useFocusEffect's async getList() resolves. Fix pattern: only saveList after a 'loaded' state flag is true. After main agent fixes, retest with the exact playwright flow in this iteration: add -> hard-reload /list -> assert item-row-* still visible. Backend basket test file: /app/backend/tests/test_basket.py — run with `export EXPO_PUBLIC_BACKEND_URL=... && export MONGO_URL=... DB_NAME=test_database && cd /app/backend && python -m pytest tests/test_basket.py -v`.",
+  "rca_of_issue": "Bug: 'My List' does not persist across cold-start / hard page reload. RCA: In /app/frontend/app/(tabs)/list.tsx, on first mount items state defaults to []. Two effects race: (A) useFocusEffect(() => getList().then(setItems)) — async, fires after the browser IndexedDB read resolves; (B) useEffect(() => { saveList(items); ... }, [items]) — runs synchronously on the first render with items=[] and immediately calls saveList([]) which writes JSON.stringify([]) to storage. In practice (B) completes its write before (A)'s promise resolves, so the persisted list is destroyed on every cold start. Confirmed by dumping localStorage: after add-flow it holds '\"[\\\"Milk\\\",\\\"Eggs\\\"]\"'; after hard reload it holds '\"[]\"'. Mitigation: introduce const [loaded,setLoaded] = useState(false); set it true inside getList().then; in the save effect, `if (!loaded) return;` before saveList(items). Additionally could switch (A) to a plain useEffect([]) to run only once — useFocusEffect is fine but the guard is what actually fixes the race."
+}

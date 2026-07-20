@@ -24,16 +24,23 @@ export default function ListScreen() {
   const [text, setText] = useState("");
   const [basket, setBasket] = useState<BasketResponse | null>(null);
   const [busy, setBusy] = useState(false);
+  const [loaded, setLoaded] = useState(false);
   const debounce = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useFocusEffect(
     useCallback(() => {
-      getList().then(setItems);
+      getList().then((saved) => {
+        setItems(saved);
+        setLoaded(true);
+      });
     }, [])
   );
 
   // Persist + recompute the cheapest basket whenever the list changes.
+  // Guarded by `loaded` so the initial empty state never overwrites storage
+  // before the saved list has been read back.
   useEffect(() => {
+    if (!loaded) return;
     saveList(items);
     if (debounce.current) clearTimeout(debounce.current);
     if (items.length === 0) {
@@ -51,7 +58,7 @@ export default function ListScreen() {
     return () => {
       if (debounce.current) clearTimeout(debounce.current);
     };
-  }, [items]);
+  }, [items, loaded]);
 
   const addItem = (raw: string) => {
     const v = raw.trim();

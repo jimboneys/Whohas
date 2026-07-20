@@ -9,7 +9,7 @@ import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 
 import { colors, fonts, spacing, radius, shadow } from "@/src/theme";
-import { suggest } from "@/src/api";
+import { suggest, getProEntitlement } from "@/src/api";
 import { ensureLocation, getSavedCity } from "@/src/location";
 import InstallButton from "@/src/components/InstallButton";
 import AdSlots from "@/src/components/AdSlots";
@@ -17,6 +17,9 @@ import LocalSpecial from "@/src/components/LocalSpecial";
 import QuickPicks from "@/src/components/QuickPicks";
 import SponsorStrip from "@/src/components/SponsorStrip";
 import PrivacyBadge from "@/src/components/PrivacyBadge";
+import ProDeals from "@/src/components/ProDeals";
+import { TermsGate } from "@/src/components/Legal";
+import { getDeviceId } from "@/src/pro";
 
 export default function AskScreen() {
   const insets = useSafeAreaInsets();
@@ -26,10 +29,12 @@ export default function AskScreen() {
   const [city, setCity] = useState("");
   const [locBusy, setLocBusy] = useState(false);
   const [locBlocked, setLocBlocked] = useState(false);
+  const [pro, setPro] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
       getSavedCity().then(setCity);
+      getDeviceId().then((id) => getProEntitlement(id).then((e) => setPro(e.pro)));
     }, [])
   );
 
@@ -131,7 +136,25 @@ export default function AskScreen() {
           </Pressable>
         )}
 
-        <SponsorStrip />
+        {pro ? (
+          <View style={styles.proActiveBanner} testID="pro-active-badge">
+            <Ionicons name="ribbon" size={15} color={colors.onSuccess} />
+            <Text style={styles.proActiveText}>WhoHas Pro active · ad-free</Text>
+          </View>
+        ) : (
+          <Pressable style={styles.goProBanner} onPress={() => router.push("/pro")} testID="go-pro-banner">
+            <View style={styles.goProIcon}>
+              <Ionicons name="ribbon" size={16} color={colors.brand} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.goProTitle}>Go Pro — ad-free + exclusive deals</Text>
+              <Text style={styles.goProSub}>From $5/mo · yearly or monthly</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color={colors.onBrand} />
+          </Pressable>
+        )}
+
+        {!pro && <SponsorStrip />}
 
         <QuickPicks onPick={(item) => submit(item)} />
 
@@ -159,7 +182,8 @@ export default function AskScreen() {
         {q.trim().length === 0 ? (
           <>
             <LocalSpecial />
-            <AdSlots />
+            <ProDeals pro={pro} onUpgrade={() => router.push("/pro")} />
+            {!pro && <AdSlots />}
           </>
         ) : (
           <>
@@ -186,6 +210,7 @@ export default function AskScreen() {
           </View>
         </View>
       </ScrollView>
+      <TermsGate />
     </KeyboardAvoidingView>
   );
 }
@@ -203,6 +228,18 @@ const styles = StyleSheet.create({
     alignItems: "center", justifyContent: "center",
   },
   tagline: { fontFamily: fonts.body, fontSize: 15, color: colors.onSurfaceTertiary, marginTop: spacing.xs, marginBottom: spacing.lg },
+  goProBanner: {
+    flexDirection: "row", alignItems: "center", gap: spacing.md,
+    backgroundColor: colors.brand, borderRadius: radius.lg, padding: spacing.md, marginBottom: spacing.lg, ...shadow.soft,
+  },
+  goProIcon: { width: 34, height: 34, borderRadius: radius.sm, backgroundColor: "#FFFFFF", alignItems: "center", justifyContent: "center" },
+  goProTitle: { fontFamily: fonts.bodyExtra, fontSize: 14, color: colors.onBrand },
+  goProSub: { fontFamily: fonts.bodyBold, fontSize: 12, color: "rgba(255,255,255,0.85)", marginTop: 1 },
+  proActiveBanner: {
+    flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6,
+    backgroundColor: colors.successSoft, borderRadius: radius.pill, paddingVertical: spacing.sm, marginBottom: spacing.lg,
+  },
+  proActiveText: { fontFamily: fonts.bodyExtra, fontSize: 13, color: colors.onSuccess },
   modeRow: {
     flexDirection: "row", gap: spacing.sm, backgroundColor: colors.surfaceTertiary,
     borderRadius: radius.pill, padding: spacing.xs, marginBottom: spacing.lg,

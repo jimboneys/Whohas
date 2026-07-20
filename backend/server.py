@@ -6,10 +6,12 @@ from pymongo import ReturnDocument
 import os
 import re
 import json
+import time
 import asyncio
 import logging
 import uuid
 import hashlib
+from collections import defaultdict, deque
 from pathlib import Path
 from datetime import datetime, timezone, timedelta
 from typing import List, Optional, Dict, Any
@@ -38,6 +40,29 @@ CLAUDE_MODEL = os.environ.get("CLAUDE_MODEL", "claude-sonnet-4-6").strip()
 logging.basicConfig(level=logging.INFO,
                     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger("whohas")
+
+# ---------------- Lightweight in-memory rate limiter ----------------
+# Backend runs with a single worker, so a per-process sliding-window is sufficient
+# to stop spam/abuse (comment flooding, click inflation, checkout spam, DoS).
+_rl_store: Dict[str, deque] = defaultdict(deque)
+
+
+def client_key(request: Request) -> str:
+    xff = request.headers.get("x-forwarded-for", "")
+    if xff:
+        return xff.split(",")[0].strip()
+    return request.client.host if request.client else "anon"
+
+
+def rate_limit(request: Request, bucket: str, max_calls: int, window_s: int = 60):
+    key = f"{bucket}:{client_key(request)}"
+    now = time.time()
+    dq = _rl_store[key]
+    while dq and dq[0] <= now - window_s:
+        dq.popleft()
+    if len(dq) >= max_calls:
+        raise HTTPException(status_code=429, detail="Too many requests. Please slow down.")
+    dq.append(now)
 
 app = FastAPI()
 api_router = APIRouter(prefix="/api")
@@ -441,7 +466,8 @@ async def root():
 
 
 @api_router.post("/ask", response_model=AskResponse)
-async def ask(payload: AskRequest):
+async def ask(payload: AskRequest, request: Request):
+    rate_limit(request, "ask", max_calls=25, window_s=60)
     question = payload.question.strip()
     if not question:
         raise HTTPException(status_code=400, detail="Question is required")
@@ -517,7 +543,9 @@ async def trending_questions():
 
 
 # ---------------- Ad / Partner slots (backend-managed) ----------------
-ADMIN_TOKEN = os.environ.get("ADMIN_TOKEN", "whohas-admin").strip()
+# Admin API is DISABLED unless a strong ADMIN_TOKEN is explicitly set in the
+# environment (no weak default). This prevents ad-slot tampering in production.
+ADMIN_TOKEN = os.environ.get("ADMIN_TOKEN", "").strip()
 
 DEFAULT_AD_SLOTS = [
     {"key": "deal", "label": "Deal of the Day", "price": 75, "featured": True},
@@ -568,6 +596,8 @@ async def get_ad_slots():
 
 @api_router.put("/ad-slots/{key}", response_model=AdSlot)
 async def book_ad_slot(key: str, payload: BookRequest, x_admin_token: str = Header("")):
+    if not ADMIN_TOKEN:
+        raise HTTPException(status_code=503, detail="Admin API is disabled")
     if x_admin_token != ADMIN_TOKEN:
         raise HTTPException(status_code=401, detail="Invalid admin token")
     slot = await db.ad_slots.find_one({"key": key}, {"_id": 0})
@@ -607,7 +637,8 @@ async def get_ad_clicks():
 
 
 @api_router.post("/ad-clicks/{key}")
-async def track_ad_click(key: str):
+async def track_ad_click(key: str, request: Request):
+    rate_limit(request, "adclick", max_calls=40, window_s=60)
     doc = await db.ad_clicks.find_one_and_update(
         {"key": key},
         {"$inc": {"clicks": 1}},
@@ -652,7 +683,8 @@ async def list_comments():
 
 
 @api_router.post("/comments", response_model=CommentOut)
-async def create_comment(payload: CommentCreate):
+async def create_comment(payload: CommentCreate, request: Request):
+    rate_limit(request, "comments", max_calls=8, window_s=60)
     text = payload.text.strip()
     if not text:
         raise HTTPException(status_code=400, detail="Comment text is required")
@@ -674,7 +706,8 @@ async def create_comment(payload: CommentCreate):
 
 
 @api_router.post("/comments/{comment_id}/like")
-async def like_comment(comment_id: str):
+async def like_comment(comment_id: str, request: Request):
+    rate_limit(request, "like", max_calls=40, window_s=60)
     doc = await db.comments.find_one_and_update(
         {"id": comment_id},
         {"$inc": {"likes": 1}},
@@ -731,6 +764,7 @@ async def _grant_pro(device_id: str, plan: str):
 
 @api_router.post("/pro/checkout")
 async def pro_checkout(payload: ProCheckoutRequest, request: Request):
+    rate_limit(request, "checkout", max_calls=6, window_s=60)
     plan = payload.plan
     if plan not in PRO_PLANS:
         raise HTTPException(status_code=400, detail="Invalid plan")

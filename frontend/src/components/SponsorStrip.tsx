@@ -5,7 +5,7 @@ import * as WebBrowser from "expo-web-browser";
 import { colors, fonts, spacing, radius, shadow } from "@/src/theme";
 import { trackAdClick } from "@/src/api";
 
-const IMG = "?crop=entropy&cs=srgb&fm=jpg&q=85&w=400";
+const IMG = "?crop=entropy&cs=srgb&fm=jpg&q=90&w=800";
 
 type Sponsor = { key: string; name: string; tagline: string; url: string; image: string; accent: string; tint: string };
 

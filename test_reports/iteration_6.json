@@ -1,0 +1,41 @@
+{
+  "summary": "Backend-only verification of WhoHas Pro (Stripe via emergentintegrations) + security hardening. 17/17 PASSED in test_pro_and_security.py. Verified: POST /api/pro/checkout for plan=yearly ($60) & plan=monthly ($6.99) returns Stripe checkout URL + session_id (200) and persists a payment_transactions row with server-side amount, currency=usd, payment_status='initiated', processed=false; invalid plan -> 400 with 'Invalid plan'. GET /api/pro/status/{session_id} returns payment_status (Stripe reports 'unpaid'/'open' since no card was entered), plan='yearly', pro=false, expires_at=null; unknown session_id -> 404. GET /api/pro/entitlement?device_id=NEW returns {pro:false, plan:null, expires_at:null}. SECURITY: PUT /api/ad-slots/{key} returns 503 'Admin API is disabled' both with and without X-Admin-Token because ADMIN_TOKEN is unset. RATE LIMITING: POST /api/pro/checkout > 6/60s returns 429 (invalid-plan 400s also count toward the bucket — confirmed by inspection); POST /api/comments > 8/60s returns 429 with earlier requests succeeding as 200. REGRESSION: /api/ (root) 200, /api/ad-clicks 200 with seeded keys deal/sponsor/weekly, /api/ask returns direct_answer + product card for shopping queries, no product for non-shopping queries. PRIVACY: verified in DB — POST /api/ask with question='Who has cheap bananas TEST_priv_...?' + location='Austin' returns response.question containing 'Austin' (folded-in for search/display) but the persisted queries.question equals the ORIGINAL user text with NO 'Austin' or ' in Austin' leak. Full stack behaves as designed; no code changes needed.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_pro_and_security.py",
+    "/app/backend/tests/test_community_and_ads.py",
+    "/app/backend/tests/test_whohas_api.py",
+    "/app/test_reports/pytest/pytest_results.xml"
+  ],
+  "action_items": [
+    "None — all Pro + security + privacy checks pass. Note for main agent: full 'paid' Stripe flow (webhook -> _grant_pro -> entitlement pro:true) is NOT auto-testable in CI because it requires interactive card entry on checkout.stripe.com. Recommend a Stripe CLI-based smoke test (`stripe listen` + `stripe trigger checkout.session.completed`) or the emergentintegrations webhook test hook before production launch to validate the paid-branch and idempotent-processed guard."
+  ],
+  "critical_code_review_comments": [
+    "server.py:598 book_ad_slot signature uses `x_admin_token: str = Header('')` — currently correct because the 503 disabled-check runs first; if ADMIN_TOKEN is ever populated, be aware Header('') means the default is empty-string not None (fine, but explicit `Header(None)` would be more idiomatic).",
+    "server.py:766 pro_checkout — rate_limit runs BEFORE plan validation, so invalid-plan 400s still consume the 6/60s bucket. This is desirable (prevents attackers from probing/burning through the limiter with cheap 400s), but worth documenting.",
+    "server.py:47 _rl_store is an unbounded defaultdict(deque). Under a large distinct-IP attack it grows monotonically until process restart. Consider periodic reaping of empty deques (already done inline via popleft), plus a cap on total keys, before production launch.",
+    "server.py:481 privacy fold-in — 'if loc and loc.lower() not in question.lower()' correctly avoids double-appending when the user already mentions the city; combined with `stored_question = question` before the fold this cleanly implements the 'no location harvesting' privacy claim. Verified end-to-end in DB.",
+    "server.py:812 idempotency — _grant_pro is only called when payment_status=='paid' AND not tx.processed, then processed is flipped. Good. The GET-status handler also handles re-polls after processed by re-reading the entitlement (branch at 818-821). Solid.",
+    "server.py:843 stripe_webhook — returns {'received': False} on signature failure but with HTTP 200. Convention is to return 400/401 so Stripe retries. Consider raising HTTPException(400) on webhook validation failure to avoid silently dropping legitimate retries after a transient outage.",
+    "server.py:669 list_comments still returns up to 1000 docs with no pagination (carryover from prior iterations)."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_pro_and_security.py (new — 17 tests covering pro + security + privacy)",
+    "/app/test_reports/pytest/pytest_results.xml (regenerated)"
+  ],
+  "success_rate": {"backend": "100% (17/17)", "frontend": "not tested (backend-only request)"},
+  "seed_data_creation": "During the run: 3 rows inserted into payment_transactions (device_ids TESTDEV_yearly_01, TESTDEV_monthly_01, and ~6+ from the checkout rate-limit burst with a TESTDEV_rl_* prefix), and 8-12 TEST_rl_* rows into comments before the 429. All rows are prefixed TESTDEV_/TEST_ and are deleted by test_cleanup_test_data at end of run (verified: comments/queries/payment_transactions/entitlements delete_many all acknowledged). Rate-limit windows drain automatically after 60s.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Pro + security stack fully green. Public URL from /app/frontend/.env EXPO_PUBLIC_BACKEND_URL. To rerun: `export EXPO_PUBLIC_BACKEND_URL=$(grep '^EXPO_PUBLIC_BACKEND_URL=' /app/frontend/.env | cut -d= -f2) && export $(grep -E '^(MONGO_URL|DB_NAME)=' /app/backend/.env | xargs) && cd /app/backend && python -m pytest tests/test_pro_and_security.py -v`. If back-to-back full runs: WAIT 60-70s between runs because the rate-limit tests exhaust the checkout(6) + comments(8) per-IP buckets, and pytest inherits the same egress IP as the previous run. Full 'paid' Stripe flow can only be validated via a manual card entry on the checkout URL or via a Stripe CLI-triggered webhook against /api/webhook/stripe (see action_items).",
+  "rca_of_issue": "N/A — no bug. One initial test failure (GET / at public URL returned Expo HTML shell) was a test-topology mistake, not a backend defect: Kubernetes ingress routes non-/api/* to the Expo frontend, so the backend's `@app.get('/')` handler is not reachable at the public URL. Test was corrected to assert status 200 only and rely on /api/ for backend health. Backend /api/ returns proper JSON."
+}

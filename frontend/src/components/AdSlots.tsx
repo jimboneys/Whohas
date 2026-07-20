@@ -7,9 +7,10 @@ import { useFocusEffect } from "expo-router";
 
 import { colors, fonts, spacing, radius, shadow } from "@/src/theme";
 import { getAdClicks, trackAdClick } from "@/src/api";
+import { useSponsorNDA } from "@/src/components/Legal";
 
 const ADVERTISE_EMAIL = "advertise@whohas.app";
-const IMG = "?crop=entropy&cs=srgb&fm=jpg&q=85&w=500";
+const IMG = "?crop=entropy&cs=srgb&fm=jpg&q=90&w=800";
 
 type Sponsor = { name: string; tagline: string; url: string; image: string };
 type Slot = {
@@ -65,6 +66,7 @@ function openAdvertise(slot: Slot) {
 
 export default function AdSlots() {
   const [clicks, setClicks] = useState<Record<string, number>>({});
+  const { guard, modal } = useSponsorNDA();
 
   useFocusEffect(
     useCallback(() => {
@@ -154,7 +156,7 @@ export default function AdSlots() {
               key={s.key}
               testID={`ad-slot-${s.key}`}
               style={({ pressed }) => [styles.openCard, { borderColor: s.accent }, pressed && { opacity: 0.92 }]}
-              onPress={() => openAdvertise(s)}
+              onPress={() => guard(() => openAdvertise(s))}
             >
               <View style={[styles.iconBadge, { backgroundColor: s.tint }]}>
                 <Ionicons name="add" size={20} color={s.accent} />
@@ -169,6 +171,7 @@ export default function AdSlots() {
           )
         )}
       </View>
+      {modal}
     </>
   );
 }

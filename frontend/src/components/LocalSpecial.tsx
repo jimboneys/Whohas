@@ -3,11 +3,12 @@ import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 
 import { fonts, spacing, radius } from "@/src/theme";
+import { useSponsorNDA } from "@/src/components/Legal";
 
 const ORANGE = "#FF8C42";
 const ORANGE_DEEP = "#F2712B";
 const ADVERTISE_EMAIL = "advertise@whohas.app";
-const IMG = "?crop=entropy&cs=srgb&fm=jpg&q=85&w=400";
+const IMG = "?crop=entropy&cs=srgb&fm=jpg&q=90&w=800";
 
 // Rotating pool of local restaurant specials (mock / demo content) with high-quality photos.
 const SPECIALS = [
@@ -25,20 +26,26 @@ function todaySpecial() {
 
 export default function LocalSpecial() {
   const s = todaySpecial();
+  const { guard, modal } = useSponsorNDA();
 
   const openMaps = () => {
     Haptics.selectionAsync().catch(() => {});
     Linking.openURL(`https://www.google.com/maps/search/${encodeURIComponent(s.mapsQuery)}`).catch(() => {});
   };
 
-  const book = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+  const doBook = () => {
     const subject = encodeURIComponent("WhoHas: book Local Special of the Day");
     const body = encodeURIComponent("Hi! I'd like to feature my restaurant's daily special on WhoHas. Here are my details:");
     Linking.openURL(`mailto:${ADVERTISE_EMAIL}?subject=${subject}&body=${body}`).catch(() => {});
   };
 
+  const book = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    guard(doBook);
+  };
+
   return (
+    <>
     <Pressable
       testID="local-special"
       style={({ pressed }) => [styles.card, pressed && { opacity: 0.94 }]}
@@ -75,6 +82,8 @@ export default function LocalSpecial() {
         </View>
       </View>
     </Pressable>
+    {modal}
+    </>
   );
 }
 

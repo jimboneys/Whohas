@@ -42,6 +42,20 @@ export function setupPWA() {
   }
 
   if ("serviceWorker" in navigator) {
-    navigator.serviceWorker.register("/sw.js").catch(() => {});
+    if (__DEV__) {
+      // Never run a caching service worker on the dev / preview server — a stale
+      // cached app shell can reference an old JS bundle hash and 404 the app.
+      // Actively self-heal any SW/caches left over from a previous session.
+      navigator.serviceWorker
+        .getRegistrations()
+        .then((regs) => regs.forEach((r) => r.unregister()))
+        .catch(() => {});
+      if (typeof caches !== "undefined") {
+        caches.keys().then((keys) => keys.forEach((k) => caches.delete(k))).catch(() => {});
+      }
+    } else {
+      // Production static export (the PWA) — safe to register for installability.
+      navigator.serviceWorker.register("/sw.js").catch(() => {});
+    }
   }
 }

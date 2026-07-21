@@ -27,8 +27,8 @@ next-env.d.ts
 
 # Production builds
 /build
-dist/
-dist
+/dist
+# (frontend/dist IS committed on purpose so Vercel can deploy the PWA from the repo)
 
 # Environment files (comprehensive coverage)
 .env

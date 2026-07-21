@@ -6,9 +6,9 @@ node_modules/
 # Expo
 .expo/
 .metro-cache/
-dist/
 web-build/
 expo-env.d.ts
+# NOTE: dist/ is intentionally committed so Vercel can deploy the exported PWA
 
 # Native
 .kotlin/

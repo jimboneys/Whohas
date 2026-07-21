@@ -22,7 +22,9 @@ cd "$FRONTEND_DIR"
 
 echo "🏗  Building PWA against backend: $BACKEND_URL"
 rm -rf dist
-EXPO_PUBLIC_BACKEND_URL="$BACKEND_URL" npx expo export -p web
+# --clear wipes Metro cache so the new EXPO_PUBLIC_BACKEND_URL is actually inlined
+# (a stale cache will otherwise re-embed the previous backend URL).
+EXPO_PUBLIC_BACKEND_URL="$BACKEND_URL" npx expo export -p web --clear
 
 # README (build info)
 cat > dist/README-PWA.txt <<EOF

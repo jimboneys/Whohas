@@ -1,10 +1,11 @@
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { useEffect } from "react";
-import { LogBox } from "react-native";
+import { LogBox, Platform } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { useFonts } from "expo-font";
+import { Analytics } from "@vercel/analytics/react";
 
 import { useIconFonts } from "@/src/hooks/use-icon-fonts";
 import { setupPWA } from "@/src/pwa";
@@ -50,6 +51,7 @@ export default function RootLayout() {
           <Stack.Screen name="(tabs)" />
           <Stack.Screen name="results" />
         </Stack>
+        {Platform.OS === "web" && <Analytics />}
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );

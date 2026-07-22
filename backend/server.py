@@ -36,6 +36,8 @@ SERPAPI_API_KEY = os.environ.get("SERPAPI_API_KEY", "").strip()
 ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "").strip()
 EMERGENT_LLM_KEY = os.environ.get("EMERGENT_LLM_KEY", "").strip()
 CLAUDE_MODEL = os.environ.get("CLAUDE_MODEL", "claude-sonnet-4-6").strip()
+# Amazon Associates tag — appended to Amazon links so click-throughs earn commission.
+AMAZON_ASSOC_TAG = os.environ.get("AMAZON_ASSOC_TAG", "Jimboneys-20").strip()
 
 logging.basicConfig(level=logging.INFO,
                     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -190,6 +192,17 @@ from urllib.parse import quote_plus
 
 def google_url(text: str) -> str:
     return f"https://www.google.com/search?q={quote_plus(text)}"
+
+
+def amazon_search_url(query: str) -> str:
+    q = quote_plus(query or "grocery deals")
+    if AMAZON_ASSOC_TAG:
+        return f"https://www.amazon.com/s?k={q}&tag={AMAZON_ASSOC_TAG}"
+    return f"https://www.amazon.com/s?k={q}"
+
+
+def amazon_home_url() -> str:
+    return f"https://www.amazon.com/?tag={AMAZON_ASSOC_TAG}" if AMAZON_ASSOC_TAG else "https://www.amazon.com/"
 
 
 def maps_url(text: str) -> str:
@@ -587,6 +600,16 @@ async def basket(payload: BasketRequest, request: Request):
         "totals": totals,
         "cheapest": {"store": cheapest["store"], "total": cheapest["total"], "savings": savings},
         "best_mix_total": best_mix_total,
+    }
+
+
+@api_router.get("/affiliate")
+async def affiliate(q: str = ""):
+    """Amazon Associates links — used by the in-app 'Shop on Amazon' box."""
+    return {
+        "amazon_tag": AMAZON_ASSOC_TAG,
+        "amazon_url": amazon_home_url(),
+        "amazon_search_url": amazon_search_url(q) if q.strip() else amazon_home_url(),
     }
 
 

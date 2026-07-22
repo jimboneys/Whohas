@@ -18,6 +18,7 @@ import QuickPicks from "@/src/components/QuickPicks";
 import SponsorStrip from "@/src/components/SponsorStrip";
 import PrivacyBadge from "@/src/components/PrivacyBadge";
 import ProDeals from "@/src/components/ProDeals";
+import AmazonBox from "@/src/components/AmazonBox";
 import InstallBanner from "@/src/components/InstallBanner";
 import { TermsGate } from "@/src/components/Legal";
 import { getDeviceId } from "@/src/pro";
@@ -187,6 +188,7 @@ export default function AskScreen() {
             <LocalSpecial />
             <ProDeals pro={pro} onUpgrade={() => router.push("/pro")} />
             {!pro && <AdSlots />}
+            <AmazonBox />
           </>
         ) : (
           <>

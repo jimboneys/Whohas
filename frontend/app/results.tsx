@@ -14,6 +14,7 @@ import { ask, AskResponse } from "@/src/api";
 import { addHistory } from "@/src/history";
 import { getSavedCity } from "@/src/location";
 import ProductResult from "@/src/components/ProductResult";
+import AmazonBox from "@/src/components/AmazonBox";
 
 export default function ResultsScreen() {
   const insets = useSafeAreaInsets();
@@ -123,6 +124,12 @@ export default function ResultsScreen() {
           )}
 
           {data.product ? <ProductResult product={data.product} /> : null}
+
+          <AmazonBox
+            query={data.product?.name || question}
+            title="Shop this on Amazon"
+            subtitle="Compare & buy — fast delivery"
+          />
 
           <View style={styles.heroCard} testID="answer-card">
             <Text style={styles.heroLabel}>FOUND IT FOR YOU 🎉</Text>

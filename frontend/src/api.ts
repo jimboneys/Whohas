@@ -78,6 +78,16 @@ export async function computeBasket(items: string[]): Promise<BasketResponse> {
   return res.json();
 }
 
+// ---------------- Amazon affiliate ----------------
+export type AffiliateLinks = { amazon_tag: string; amazon_url: string; amazon_search_url: string };
+
+export async function getAmazonLink(q?: string): Promise<AffiliateLinks> {
+  const qs = q ? `?q=${encodeURIComponent(q)}` : "";
+  const res = await fetch(`${BASE}/api/affiliate${qs}`);
+  if (!res.ok) throw new Error(`Affiliate failed (${res.status})`);
+  return res.json();
+}
+
 export type Sponsor = { name: string; tagline: string; url: string; image: string };
 export type AdSlot = {
   key: string;

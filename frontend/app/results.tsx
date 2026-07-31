@@ -15,6 +15,7 @@ import { addHistory } from "@/src/history";
 import { getSavedCity } from "@/src/location";
 import ProductResult from "@/src/components/ProductResult";
 import AmazonBox from "@/src/components/AmazonBox";
+import ScreenBackdrop from "@/src/components/ScreenBackdrop";
 
 export default function ResultsScreen() {
   const insets = useSafeAreaInsets();
@@ -81,6 +82,7 @@ export default function ResultsScreen() {
 
   return (
     <View style={styles.flex}>
+      <ScreenBackdrop />
       <View style={[styles.header, { paddingTop: insets.top + spacing.sm }]} testID="results-header">
         <Pressable onPress={() => router.back()} hitSlop={12} testID="back-button" style={styles.backBtn}>
           <Ionicons name="arrow-back" size={22} color={colors.onSurface} />

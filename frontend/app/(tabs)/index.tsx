@@ -20,6 +20,7 @@ import PrivacyBadge from "@/src/components/PrivacyBadge";
 import ProDeals from "@/src/components/ProDeals";
 import AmazonBox from "@/src/components/AmazonBox";
 import InstallBanner from "@/src/components/InstallBanner";
+import ScreenBackdrop from "@/src/components/ScreenBackdrop";
 import { TermsGate } from "@/src/components/Legal";
 import { getDeviceId } from "@/src/pro";
 
@@ -100,6 +101,7 @@ export default function AskScreen() {
       style={styles.flex}
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
+      <ScreenBackdrop />
       <ScrollView
         contentContainerStyle={{ padding: spacing.xl, paddingTop: insets.top + spacing.lg, paddingBottom: spacing.xxxl }}
         keyboardShouldPersistTaps="handled"
@@ -140,28 +142,6 @@ export default function AskScreen() {
           </Pressable>
         )}
 
-        {pro ? (
-          <View style={styles.proActiveBanner} testID="pro-active-badge">
-            <Ionicons name="ribbon" size={15} color={colors.onSuccess} />
-            <Text style={styles.proActiveText}>WhoHas Pro active · ad-free</Text>
-          </View>
-        ) : Platform.OS === "web" ? (
-          <Pressable style={styles.goProBanner} onPress={() => router.push("/pro")} testID="go-pro-banner">
-            <View style={styles.goProIcon}>
-              <Ionicons name="ribbon" size={16} color={colors.brand} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.goProTitle}>Go Pro — ad-free + exclusive deals</Text>
-              <Text style={styles.goProSub}>From $5/mo · yearly or monthly</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color={colors.onBrand} />
-          </Pressable>
-        ) : null}
-
-        {!pro && <SponsorStrip />}
-
-        <QuickPicks onPick={(item) => submit(item)} />
-
         <View style={styles.searchCard} testID="search-card">
           <Ionicons name="search" size={20} color="#B5AFA5" />
           <TextInput
@@ -183,8 +163,23 @@ export default function AskScreen() {
           </Pressable>
         </View>
 
+        {pro ? (
+          <View style={styles.proActivePill} testID="pro-active-badge">
+            <Ionicons name="ribbon" size={13} color={colors.onSuccess} />
+            <Text style={styles.proActivePillText}>Pro active · ad-free</Text>
+          </View>
+        ) : Platform.OS === "web" ? (
+          <Pressable style={styles.goProSmall} onPress={() => router.push("/pro")} testID="go-pro-banner">
+            <Ionicons name="ribbon" size={14} color={colors.brand} />
+            <Text style={styles.goProSmallText}>Go Pro — ad-free + exclusive deals</Text>
+            <Ionicons name="chevron-forward" size={16} color={colors.brand} />
+          </Pressable>
+        ) : null}
+
         {q.trim().length === 0 ? (
           <>
+            {!pro && <SponsorStrip />}
+            <QuickPicks onPick={(item) => submit(item)} />
             <LocalSpecial />
             <ProDeals pro={pro} onUpgrade={() => router.push("/pro")} />
             {!pro && <AdSlots />}
@@ -233,18 +228,18 @@ const styles = StyleSheet.create({
     alignItems: "center", justifyContent: "center",
   },
   tagline: { fontFamily: fonts.body, fontSize: 15, color: colors.onSurfaceTertiary, marginTop: spacing.xs, marginBottom: spacing.lg },
-  goProBanner: {
-    flexDirection: "row", alignItems: "center", gap: spacing.md,
-    backgroundColor: colors.brand, borderRadius: radius.lg, padding: spacing.md, marginBottom: spacing.lg, ...shadow.soft,
+  goProSmall: {
+    flexDirection: "row", alignItems: "center", gap: 6,
+    alignSelf: "flex-start", backgroundColor: colors.brandTertiary, borderRadius: radius.pill,
+    paddingHorizontal: spacing.md, paddingVertical: spacing.sm, marginBottom: spacing.lg,
   },
-  goProIcon: { width: 34, height: 34, borderRadius: radius.sm, backgroundColor: "#FFFFFF", alignItems: "center", justifyContent: "center" },
-  goProTitle: { fontFamily: fonts.bodyExtra, fontSize: 14, color: colors.onBrand },
-  goProSub: { fontFamily: fonts.bodyBold, fontSize: 12, color: "rgba(255,255,255,0.85)", marginTop: 1 },
-  proActiveBanner: {
-    flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6,
-    backgroundColor: colors.successSoft, borderRadius: radius.pill, paddingVertical: spacing.sm, marginBottom: spacing.lg,
+  goProSmallText: { fontFamily: fonts.bodyExtra, fontSize: 12.5, color: colors.brand },
+  proActivePill: {
+    flexDirection: "row", alignItems: "center", gap: 5, alignSelf: "flex-start",
+    backgroundColor: colors.successSoft, borderRadius: radius.pill,
+    paddingHorizontal: spacing.md, paddingVertical: spacing.sm, marginBottom: spacing.lg,
   },
-  proActiveText: { fontFamily: fonts.bodyExtra, fontSize: 13, color: colors.onSuccess },
+  proActivePillText: { fontFamily: fonts.bodyExtra, fontSize: 12.5, color: colors.onSuccess },
   modeRow: {
     flexDirection: "row", gap: spacing.sm, backgroundColor: colors.surfaceTertiary,
     borderRadius: radius.pill, padding: spacing.xs, marginBottom: spacing.lg,

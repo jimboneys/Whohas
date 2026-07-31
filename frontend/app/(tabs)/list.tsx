@@ -12,6 +12,7 @@ import { Image } from "expo-image";
 import { colors, fonts, spacing, radius, shadow, money } from "@/src/theme";
 import { getList, saveList } from "@/src/grocery";
 import { computeBasket, BasketResponse } from "@/src/api";
+import ScreenBackdrop from "@/src/components/ScreenBackdrop";
 
 const SUGGESTED = [
   "Eggs", "Milk", "Bread", "Bananas", "Chicken", "Rice", "Pasta",
@@ -93,6 +94,7 @@ export default function ListScreen() {
       style={styles.flex}
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
+      <ScreenBackdrop />
       <View style={[styles.header, { paddingTop: insets.top + spacing.md }]} testID="list-header">
         <View>
           <Text style={styles.title}>My List</Text>

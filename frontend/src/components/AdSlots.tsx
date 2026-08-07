@@ -49,7 +49,7 @@ const SLOTS: Slot[] = [
   {
     key: "local", label: "Local Hero", accent: "#EF476F", tint: "#FDE0E8", featured: true,
     sponsor: {
-      name: "Ton's Hauling", tagline: "Omaha junk removal & hauling — fast, friendly",
+      name: "Ton's Hauling", tagline: "Omaha junk removal & hauling — free estimates",
       url: "https://www.google.com/maps/search/Ton%27s%20Hauling%20Omaha%20NE",
       image: "https://images.unsplash.com/photo-1519003722824-194d4455a60c" + IMG,
       phone: "402-810-6319",
@@ -140,7 +140,7 @@ export default function AdSlots() {
                 hitSlop={6}
               >
                 <Ionicons name="call" size={13} color="#FFFFFF" />
-                <Text style={styles.callBtnText}>Call {featured.sponsor.phone}</Text>
+                <Text style={styles.callBtnText}>Free estimate · {featured.sponsor.phone}</Text>
               </Pressable>
             ) : null}
           </View>

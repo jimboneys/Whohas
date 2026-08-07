@@ -38,6 +38,8 @@ EMERGENT_LLM_KEY = os.environ.get("EMERGENT_LLM_KEY", "").strip()
 CLAUDE_MODEL = os.environ.get("CLAUDE_MODEL", "claude-sonnet-4-6").strip()
 # Amazon Associates tag — appended to Amazon links so click-throughs earn commission.
 AMAZON_ASSOC_TAG = os.environ.get("AMAZON_ASSOC_TAG", "Jimboneys-20").strip()
+# Emergent referral link — the "Built with Emergent" box points here to earn referral credit.
+EMERGENT_REF_URL = os.environ.get("EMERGENT_REF_URL", "https://app.emergent.sh").strip()
 
 logging.basicConfig(level=logging.INFO,
                     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -753,6 +755,9 @@ SPONSOR_SEED: List[Dict[str, Any]] = [
     {"placement": "strip", "key": "weekly", "name": "Kroger", "tagline": "Weekly coupons",
      "url": "https://www.kroger.com/weeklyad", "accent": "#118AB2", "tint": "#E3F2F7",
      "image": "https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da" + _SIMG, "order": 3},
+    {"placement": "strip", "key": "emergent", "name": "Built with Emergent", "tagline": "Build apps with AI",
+     "url": EMERGENT_REF_URL, "accent": "#6C5CE7", "tint": "#ECE9FF",
+     "image": "https://images.unsplash.com/photo-1461749280684-dccba630e2f6" + _SIMG, "order": 4},
     # Partner Spots (AdSlots)
     {"placement": "adslot", "key": "deal", "name": "ALDI", "tagline": "Dozen large eggs — just $2.25 today",
      "url": "https://www.aldi.us/weekly-specials/",
@@ -769,6 +774,12 @@ SPONSOR_SEED: List[Dict[str, Any]] = [
      "url": "https://www.google.com/maps/search/Ton%27s%20Hauling%20Omaha%20NE",
      "image": "https://images.unsplash.com/photo-1519003722824-194d4455a60c" + _SIMG,
      "phone": "402-810-6319", "order": 4, "featured": True},
+    # Emergent referral — booked into the "flash" slot to earn referral credit.
+    {"placement": "adslot", "key": "flash", "name": "Built with Emergent",
+     "tagline": "Turn ideas into apps with AI — try it free",
+     "url": EMERGENT_REF_URL,
+     "image": "https://images.unsplash.com/photo-1461749280684-dccba630e2f6" + _SIMG,
+     "order": 5, "featured": False},
 ]
 
 

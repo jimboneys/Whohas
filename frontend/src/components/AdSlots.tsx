@@ -46,7 +46,14 @@ const SLOTS: Slot[] = [
     },
   },
   { key: "flash", label: "Flash Sale", accent: "#FF8C42", tint: "#FFE8D6" },
-  { key: "local", label: "Local Hero", accent: "#EF476F", tint: "#FDE0E8" },
+  {
+    key: "local", label: "Local Hero", accent: "#EF476F", tint: "#FDE0E8",
+    sponsor: {
+      name: "Ton's Hauling", tagline: "Omaha junk removal & hauling — fast, friendly",
+      url: "https://www.google.com/maps/search/Ton%27s%20Hauling%20Omaha%20NE",
+      image: "https://images.unsplash.com/photo-1519003722824-194d4455a60c" + IMG,
+    },
+  },
   { key: "coupon", label: "Coupon", accent: "#7B61FF", tint: "#ECE6FF" },
 ];
 

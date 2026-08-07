@@ -31,13 +31,10 @@ next-env.d.ts
 # (frontend/dist IS committed on purpose so Vercel can deploy the PWA from the repo)
 
 # Environment files (comprehensive coverage)
-.env
-.env.*
 !.env.example
-**/.env
-**/.env.*
 *token.json*
 *credentials.json*
+memory/test_credentials.md
 
 # Logs and debug files
 npm-debug.log*

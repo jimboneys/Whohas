@@ -208,6 +208,9 @@ export default function AskScreen() {
             <Ionicons name="sparkles" size={12} color="#C9C3B8" />
             <Text style={styles.footerText}>Powered by Claude Sonnet 4.6</Text>
           </View>
+          <Pressable onPress={() => router.push("/privacy")} hitSlop={8} testID="privacy-link">
+            <Text style={styles.privacyLink}>Privacy Policy</Text>
+          </Pressable>
         </View>
       </ScrollView>
       <TermsGate />
@@ -234,6 +237,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md, paddingVertical: spacing.sm, marginBottom: spacing.lg,
   },
   goProSmallText: { fontFamily: fonts.bodyExtra, fontSize: 12.5, color: colors.brand },
+  privacyLink: {
+    fontFamily: fonts.bodyBold, fontSize: 12.5, color: colors.onSurfaceTertiary,
+    textDecorationLine: "underline", marginTop: spacing.sm,
+  },
   proActivePill: {
     flexDirection: "row", alignItems: "center", gap: 5, alignSelf: "flex-start",
     backgroundColor: colors.successSoft, borderRadius: radius.pill,

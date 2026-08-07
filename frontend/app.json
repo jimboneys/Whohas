@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "frontend",
+    "name": "WhoHas",
     "slug": "frontend",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -22,9 +22,12 @@
       },
       "edgeToEdgeEnabled": true,
       "permissions": [
-        "ACCESS_COARSE_LOCATION",
+        "ACCESS_COARSE_LOCATION"
+      ],
+      "blockedPermissions": [
         "ACCESS_FINE_LOCATION"
       ],
+      "versionCode": 1,
       "package": "com.emergent.whohasapp.pg7qrr"
     },
     "web": {

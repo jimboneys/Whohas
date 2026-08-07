@@ -178,11 +178,11 @@ export default function AskScreen() {
 
         {q.trim().length === 0 ? (
           <>
+            {!pro && <AdSlots />}
             {!pro && <SponsorStrip />}
             <QuickPicks onPick={(item) => submit(item)} />
             <LocalSpecial />
             <ProDeals pro={pro} onUpgrade={() => router.push("/pro")} />
-            {!pro && <AdSlots />}
             <AmazonBox />
           </>
         ) : (

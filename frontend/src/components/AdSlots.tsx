@@ -12,7 +12,7 @@ import { useSponsorNDA } from "@/src/components/Legal";
 const ADVERTISE_EMAIL = "advertise@whohas.app";
 const IMG = "?crop=entropy&cs=srgb&fm=jpg&q=90&w=800";
 
-type Sponsor = { name: string; tagline: string; url: string; image: string };
+type Sponsor = { name: string; tagline: string; url: string; image: string; phone?: string };
 type Slot = {
   key: string;
   label: string;
@@ -25,7 +25,7 @@ type Slot = {
 // 3 sponsored (MOCK ads) + 3 open slots.
 const SLOTS: Slot[] = [
   {
-    key: "deal", label: "Deal of the Day", accent: colors.brand, tint: colors.brandTertiary, featured: true,
+    key: "deal", label: "Deal of the Day", accent: colors.brand, tint: colors.brandTertiary,
     sponsor: {
       name: "ALDI", tagline: "Dozen large eggs — just $2.25 today", url: "https://www.aldi.us/weekly-specials/",
       image: "https://images.unsplash.com/photo-1582722872445-44dc5f7e3c8f" + IMG,
@@ -47,11 +47,12 @@ const SLOTS: Slot[] = [
   },
   { key: "flash", label: "Flash Sale", accent: "#FF8C42", tint: "#FFE8D6" },
   {
-    key: "local", label: "Local Hero", accent: "#EF476F", tint: "#FDE0E8",
+    key: "local", label: "Local Hero", accent: "#EF476F", tint: "#FDE0E8", featured: true,
     sponsor: {
       name: "Ton's Hauling", tagline: "Omaha junk removal & hauling — fast, friendly",
       url: "https://www.google.com/maps/search/Ton%27s%20Hauling%20Omaha%20NE",
       image: "https://images.unsplash.com/photo-1519003722824-194d4455a60c" + IMG,
+      phone: "402-810-6319",
     },
   },
   { key: "coupon", label: "Coupon", accent: "#7B61FF", tint: "#ECE6FF" },
@@ -90,6 +91,12 @@ export default function AdSlots() {
     WebBrowser.openBrowserAsync(slot.sponsor!.url).catch(() => {});
   };
 
+  const callSponsor = (phone: string, key: string) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+    trackAdClick(key).catch(() => {});
+    Linking.openURL(`tel:${phone.replace(/[^0-9+]/g, "")}`).catch(() => {});
+  };
+
   const featured = SLOTS.find((s) => s.featured);
   const rest = SLOTS.filter((s) => !s.featured);
   const openCount = SLOTS.filter((s) => !s.sponsor).length;
@@ -125,6 +132,17 @@ export default function AdSlots() {
                 {fmt(clicks[featured.key] || 0)} clicks
               </Text>
             </View>
+            {featured.sponsor.phone ? (
+              <Pressable
+                testID="sponsor-call-featured"
+                style={[styles.callBtn, { backgroundColor: featured.accent }]}
+                onPress={() => callSponsor(featured.sponsor!.phone!, featured.key)}
+                hitSlop={6}
+              >
+                <Ionicons name="call" size={13} color="#FFFFFF" />
+                <Text style={styles.callBtnText}>Call {featured.sponsor.phone}</Text>
+              </Pressable>
+            ) : null}
           </View>
           <Ionicons name="chevron-forward" size={22} color={featured.accent} />
         </Pressable>
@@ -209,6 +227,12 @@ const styles = StyleSheet.create({
   featuredCta: { fontFamily: fonts.bodyBold, fontSize: 13, lineHeight: 18, color: colors.onSurfaceTertiary, marginTop: 2 },
   clickRow: { flexDirection: "row", alignItems: "center", gap: 4, marginTop: spacing.xs },
   clickText: { fontFamily: fonts.bodyExtra, fontSize: 11.5 },
+  callBtn: {
+    flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 5,
+    alignSelf: "flex-start", borderRadius: radius.pill,
+    paddingHorizontal: spacing.md, paddingVertical: 6, marginTop: spacing.sm,
+  },
+  callBtnText: { fontFamily: fonts.bodyExtra, fontSize: 12.5, color: "#FFFFFF" },
   adTag: { borderRadius: radius.sm, paddingHorizontal: 5, paddingVertical: 1 },
   adTagText: { fontFamily: fonts.bodyExtra, fontSize: 9, letterSpacing: 0.5 },
   smallRow: { flexDirection: "row", flexWrap: "wrap", gap: spacing.md, marginTop: spacing.md },

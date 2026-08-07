@@ -7,7 +7,15 @@ import * as WebBrowser from "expo-web-browser";
 import { colors, fonts, spacing, radius, shadow } from "@/src/theme";
 import { getAmazonLink } from "@/src/api";
 
+const FALLBACK_TAG = "Jimboneys-20";
+const buildFallback = (q?: string) =>
+  q
+    ? `https://www.amazon.com/s?k=${encodeURIComponent(q)}&tag=${FALLBACK_TAG}`
+    : `https://www.amazon.com/?tag=${FALLBACK_TAG}`;
+
 // Amazon Associates box — click-throughs carry the affiliate tag (set on the backend).
+// Falls back to a client-side affiliate URL if the backend endpoint isn't reachable,
+// so the box always renders and always earns commission.
 export default function AmazonBox({
   query,
   title = "Shop on Amazon",
@@ -17,15 +25,18 @@ export default function AmazonBox({
   title?: string;
   subtitle?: string;
 }) {
-  const [url, setUrl] = useState<string | null>(null);
+  const [url, setUrl] = useState<string>(buildFallback(query));
 
   useEffect(() => {
     let alive = true;
+    setUrl(buildFallback(query));
     getAmazonLink(query)
       .then((r) => {
         if (alive) setUrl(query ? r.amazon_search_url : r.amazon_url);
       })
-      .catch(() => {});
+      .catch(() => {
+        /* keep client-side fallback */
+      });
     return () => {
       alive = false;
     };
@@ -36,8 +47,6 @@ export default function AmazonBox({
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     WebBrowser.openBrowserAsync(url).catch(() => {});
   };
-
-  if (!url) return null;
 
   return (
     <Pressable style={styles.box} onPress={open} testID="amazon-box">

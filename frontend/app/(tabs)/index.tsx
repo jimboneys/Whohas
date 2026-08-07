@@ -181,7 +181,7 @@ export default function AskScreen() {
             {!pro && <AdSlots />}
             {!pro && <SponsorStrip />}
             <QuickPicks onPick={(item) => submit(item)} />
-            <LocalSpecial />
+            <LocalSpecial city={city} />
             <ProDeals pro={pro} onUpgrade={() => router.push("/pro")} />
             <AmazonBox />
           </>

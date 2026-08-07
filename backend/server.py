@@ -945,11 +945,147 @@ async def stripe_webhook(request: Request):
     if event.payment_status == "paid" and event.session_id:
         tx = await db.payment_transactions.find_one({"session_id": event.session_id})
         if tx and not tx.get("processed"):
-            await _grant_pro(tx["device_id"], tx["plan"])
+            if tx.get("plan") in PRO_PLANS:
+                await _grant_pro(tx["device_id"], tx["plan"])
             await db.payment_transactions.update_one(
                 {"session_id": event.session_id}, {"$set": {"processed": True, "payment_status": "paid"}}
             )
     return {"received": True}
+
+
+# ---------------- Local ads (city-scoped, in-app checkout) ----------------
+# City is passed per-request only to pick local ads; it is NEVER persisted
+# server-side (keeps the app's anonymity / no-data-harvesting promise).
+ADVERTISE_EMAIL = "advertise@whohas.app"
+
+
+def _norm_city(c: str) -> str:
+    return re.sub(r"[^a-z]", "", (c or "").split(",")[0].lower())
+
+
+LOCAL_ADS: Dict[str, List[Dict[str, Any]]] = {
+    "omaha": [
+        {
+            "id": "tons-hauling",
+            "name": "Ton's Hauling",
+            "tagline": "Omaha junk removal & hauling — free estimates",
+            "image": "https://images.unsplash.com/photo-1519003722824-194d4455a60c?crop=entropy&cs=srgb&fm=jpg&q=90&w=800",
+            "phone": "402-810-6319",
+            "url": "https://www.google.com/maps/search/Ton%27s%20Hauling%20Omaha%20NE",
+            "accent": "#EF476F",
+            "offer": {"label": "Single-item junk pickup", "price": 49.00},
+        },
+    ],
+}
+
+
+def _find_local_ad(ad_id: str) -> Optional[Dict[str, Any]]:
+    for ads in LOCAL_ADS.values():
+        for ad in ads:
+            if ad["id"] == ad_id:
+                return ad
+    return None
+
+
+@api_router.get("/local-ads")
+async def local_ads(city: str = ""):
+    key = _norm_city(city)
+    ads = LOCAL_ADS.get(key, [])
+    label = city.split(",")[0].strip() if city else ""
+    return {"city": label, "has_ads": len(ads) > 0, "ads": ads, "advertise_email": ADVERTISE_EMAIL}
+
+
+class AdvertiserLead(BaseModel):
+    business: str = Field(..., min_length=1, max_length=120)
+    contact: str = Field(..., min_length=3, max_length=160)
+    city: str = Field("", max_length=80)
+    message: str = Field("", max_length=500)
+
+
+@api_router.post("/advertisers")
+async def create_advertiser(payload: AdvertiserLead, request: Request):
+    rate_limit(request, "advertiser", max_calls=5, window_s=60)
+    doc = {
+        "id": str(uuid.uuid4()),
+        "business": payload.business.strip()[:120],
+        "contact": payload.contact.strip()[:160],
+        "city": payload.city.strip()[:80],
+        "message": payload.message.strip()[:500],
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    }
+    await db.advertisers.insert_one(doc)
+    return {"ok": True, "id": doc["id"]}
+
+
+@api_router.get("/local-offer/{ad_id}")
+async def local_offer_detail(ad_id: str):
+    ad = _find_local_ad(ad_id)
+    if not ad or not ad.get("offer"):
+        raise HTTPException(status_code=404, detail="Offer not found")
+    return ad
+
+
+class LocalOfferCheckout(BaseModel):
+    ad_id: str
+    device_id: str = Field(..., min_length=6, max_length=100)
+    origin_url: str = Field(..., max_length=300)
+
+
+@api_router.post("/local-offer/checkout")
+async def local_offer_checkout(payload: LocalOfferCheckout, request: Request):
+    rate_limit(request, "checkout", max_calls=6, window_s=60)
+    ad = _find_local_ad(payload.ad_id)
+    if not ad or not ad.get("offer"):
+        raise HTTPException(status_code=400, detail="Unknown offer")
+    amount = float(ad["offer"]["price"])  # server-side price — never trust client
+    origin = payload.origin_url.rstrip("/")
+    success_url = f"{origin}/offer?ad_id={payload.ad_id}&session_id={{CHECKOUT_SESSION_ID}}"
+    cancel_url = f"{origin}/offer?ad_id={payload.ad_id}"
+    stripe = _stripe(request)
+    req = CheckoutSessionRequest(
+        amount=amount, currency="usd", success_url=success_url, cancel_url=cancel_url,
+        metadata={"kind": "local_offer", "ad_id": payload.ad_id, "device_id": payload.device_id},
+    )
+    session = await stripe.create_checkout_session(req)
+    await db.payment_transactions.insert_one({
+        "session_id": session.session_id,
+        "device_id": payload.device_id,
+        "ad_id": payload.ad_id,
+        "amount": amount,
+        "currency": "usd",
+        "kind": "local_offer",
+        "payment_status": "initiated",
+        "status": "open",
+        "processed": False,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    })
+    return {"url": session.url, "session_id": session.session_id}
+
+
+@api_router.get("/local-offer/status/{session_id}")
+async def local_offer_status(session_id: str, request: Request):
+    tx = await db.payment_transactions.find_one({"session_id": session_id})
+    if not tx:
+        raise HTTPException(status_code=404, detail="Session not found")
+    stripe = _stripe(request)
+    result = await stripe.get_checkout_status(session_id)
+    await db.payment_transactions.update_one(
+        {"session_id": session_id},
+        {"$set": {"payment_status": result.payment_status, "status": result.status}},
+    )
+    paid = result.payment_status == "paid"
+    if paid and not tx.get("processed"):
+        await db.payment_transactions.update_one(
+            {"session_id": session_id}, {"$set": {"processed": True}}
+        )
+    return {
+        "payment_status": result.payment_status,
+        "status": result.status,
+        "paid": paid,
+        "ad_id": tx.get("ad_id"),
+        "amount": tx.get("amount"),
+    }
+
 
 
 def normalize_query(q: str) -> str:

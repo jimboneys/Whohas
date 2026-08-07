@@ -88,6 +88,27 @@ export async function getAmazonLink(q?: string): Promise<AffiliateLinks> {
   return res.json();
 }
 
+// ---------------- Advertiser leads ----------------
+export async function submitAdvertiser(input: {
+  business: string;
+  contact: string;
+  city?: string;
+  message?: string;
+}): Promise<{ ok: boolean; id: string }> {
+  const res = await fetch(`${BASE}/api/advertisers`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      business: input.business,
+      contact: input.contact,
+      city: input.city || "",
+      message: input.message || "",
+    }),
+  });
+  if (!res.ok) throw new Error(`Submit failed (${res.status})`);
+  return res.json();
+}
+
 export type Sponsor = { name: string; tagline: string; url: string; image: string };
 export type AdSlot = {
   key: string;

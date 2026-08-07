@@ -1,13 +1,13 @@
-import { View, Text, StyleSheet, Pressable, Linking, Image } from "react-native";
+import { useState } from "react";
+import { View, Text, StyleSheet, Pressable, Image } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 
 import { fonts, spacing, radius } from "@/src/theme";
-import { useSponsorNDA } from "@/src/components/Legal";
+import AdvertiseForm from "@/src/components/AdvertiseForm";
 
 const ORANGE = "#FF8C42";
 const ORANGE_DEEP = "#F2712B";
-const ADVERTISE_EMAIL = "advertise@whohas.app";
 const IMG = "?crop=entropy&cs=srgb&fm=jpg&q=90&w=800";
 
 // Rotating pool of local restaurant specials (mock / demo content) with high-quality photos.
@@ -24,24 +24,15 @@ function todaySpecial() {
   return SPECIALS[dayIndex % SPECIALS.length];
 }
 
-export default function LocalSpecial() {
+export default function LocalSpecial({ city }: { city?: string }) {
   const s = todaySpecial();
-  const { guard, modal } = useSponsorNDA();
+  const [showForm, setShowForm] = useState(false);
 
-  const openMaps = () => {
-    Haptics.selectionAsync().catch(() => {});
-    Linking.openURL(`https://www.google.com/maps/search/${encodeURIComponent(s.mapsQuery)}`).catch(() => {});
-  };
+  const cityLabel = city && city.trim() ? city.trim() : "Local";
 
-  const doBook = () => {
-    const subject = encodeURIComponent("WhoHas: book Local Special of the Day");
-    const body = encodeURIComponent("Hi! I'd like to feature my restaurant's daily special on WhoHas. Here are my details:");
-    Linking.openURL(`mailto:${ADVERTISE_EMAIL}?subject=${subject}&body=${body}`).catch(() => {});
-  };
-
-  const book = () => {
+  const openForm = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-    guard(doBook);
+    setShowForm(true);
   };
 
   return (
@@ -49,17 +40,19 @@ export default function LocalSpecial() {
     <Pressable
       testID="local-special"
       style={({ pressed }) => [styles.card, pressed && { opacity: 0.94 }]}
-      onPress={openMaps}
+      onPress={openForm}
     >
       <Image source={{ uri: s.image }} style={styles.photo} />
 
       <View style={styles.content}>
         <View style={styles.headRow}>
           <Ionicons name="restaurant" size={12} color="#FFFFFF" />
-          <Text style={styles.eyebrow}>LOCAL SPECIAL · TODAY</Text>
+          <Text style={styles.eyebrow} numberOfLines={1}>
+            {cityLabel.toUpperCase()} SPECIAL OF THE DAY
+          </Text>
           <View style={{ flex: 1 }} />
-          <Pressable style={styles.bookBtn} onPress={book} hitSlop={8} testID="local-special-book">
-            <Text style={styles.bookText}>Book</Text>
+          <Pressable style={styles.bookBtn} onPress={openForm} hitSlop={8} testID="local-special-book">
+            <Text style={styles.bookText}>Advertise</Text>
             <Ionicons name="add-circle" size={12} color={ORANGE} />
           </Pressable>
         </View>
@@ -82,7 +75,7 @@ export default function LocalSpecial() {
         </View>
       </View>
     </Pressable>
-    {modal}
+    <AdvertiseForm visible={showForm} city={city} onClose={() => setShowForm(false)} />
     </>
   );
 }

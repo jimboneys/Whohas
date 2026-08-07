@@ -1,0 +1,43 @@
+{
+  "summary": "Sponsors DB migration + Local ads + Advertiser lead + Affiliate + Local-offer Stripe checkout ALL PASS. Backend: 24/24 pytest PASS (test_sponsors_and_local.py). Frontend: home renders Partner Spots with Ton's Hauling featured (phone 402-810-6319, ad-slot-local testid) and Featured Sponsors strip with ALDI/Costco/Kroger (sponsor-box-deal/sponsor/weekly), all served from DB. Tapping Local Special card (local-special testid) opens advertise-form; filling advertise-business + advertise-contact + advertise-message and tapping advertise-submit shows advertise-success 'Thanks!' overlay. NOTE: on the first submit attempt the POST /api/advertisers hit a 429 because the pytest suite (rate_limit 5/60s test) had just consumed slots on the same IP; waiting 65s and resubmitting reproduced the happy path — the app itself handles the flow correctly. Existing RN-web deprecations (shadow*, pointerEvents, Image.resizeMode) still present as reported in iteration_7 — non-blocking.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": [
+      {"component": "react-native-web styles (theme.ts + LocalSpecial.tsx shadowColor/shadowOffset/shadowOpacity/shadowRadius)", "issue": "'shadow*' style props are deprecated on RN web; use 'boxShadow'. Reference: /app/frontend/src/theme.ts (shadow.card) and /app/frontend/src/components/LocalSpecial.tsx:90-93. Warning fires repeatedly."},
+      {"component": "react-native-web pointerEvents prop", "issue": "props.pointerEvents is deprecated; use style.pointerEvents. Fires on many screens."},
+      {"component": "expo-image / Image", "issue": "'Image: style.resizeMode is deprecated. Please use props.resizeMode.' — likely from LocalSpecial.tsx:96 (styles.photo has resizeMode: 'cover') and possibly other components."}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_sponsors_and_local.py",
+    "/app/test_reports/pytest/pytest_sponsors_local.xml"
+  ],
+  "action_items": [
+    "Optional: replace remaining shadow* style props with boxShadow (theme.ts, LocalSpecial.tsx card) and move resizeMode from StyleSheet to prop on Image components to silence RN-web deprecation warnings.",
+    "Optional: consider a friendlier 429 message in AdvertiseForm — currently a rate-limited submit silently leaves the form open. If AdvertiseForm swallows the error, users may not know why nothing happened."
+  ],
+  "critical_code_review_comments": [
+    "server.py:775 seed_sponsors uses $set + $setOnInsert with (placement,key) unique combination — idempotent, safe to re-run on every startup. Verified: no duplicates found.",
+    "server.py:786 GET /api/sponsors excludes _id via projection {'_id': 0} — good, avoids serialization crashes.",
+    "server.py:1060 POST /api/advertisers rate-limited 5/60s and persists to db.advertisers with a UUID id — matches spec.",
+    "server.py:1044 GET /api/local-ads normalizes city via _norm_city (strips non-alpha) so 'omaha, NE' matches 'omaha' — correct.",
+    "server.py:1089 POST /api/local-offer/checkout resolves price server-side from LOCAL_ADS[ad_id].offer.price — no client trust, good.",
+    "server.py:197 amazon_search_url always appends tag=Jimboneys-20 — verified end-to-end."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_sponsors_and_local.py (new — 24 tests, all pass)",
+    "/app/test_reports/pytest/pytest_sponsors_local.xml (new)"
+  ],
+  "success_rate": {"backend": "100% (24/24 in test_sponsors_and_local.py)", "frontend": "100% (Partner Spots + Ton's Hauling featured + Featured Sponsors strip + advertise-form open + submit -> advertise-success all pass)"},
+  "seed_data_creation": "Test-created advertisers/payment_transactions rows are cleaned up in test_cleanup fixture. Sponsors seed is auto-managed by server startup (idempotent).",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Backend: `cd /app/backend && EXPO_PUBLIC_BACKEND_URL=https://whohas-app.preview.emergentagent.com MONGO_URL=mongodb://localhost:27017 DB_NAME=test_database python -m pytest tests/test_sponsors_and_local.py -v`. If the rate-limit test flakes (429 not seen in 10 attempts), the previous test class already exhausted slots — wait 60s and rerun. Frontend advertise-submit flow shares the same 5/60s IP bucket as the backend suite — if you run pytest immediately before playwright on the same IP, the first UI submit will 429 and advertise-success won't appear. Either wait 60s or run playwright first.",
+  "rca_of_issue": "N/A — no bugs found this iteration."
+}

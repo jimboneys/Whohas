@@ -88,6 +88,31 @@ export async function getAmazonLink(q?: string): Promise<AffiliateLinks> {
   return res.json();
 }
 
+// ---------------- Sponsors (DB-backed) ----------------
+export type DbSponsor = {
+  placement: string;
+  key: string;
+  name: string;
+  tagline: string;
+  url: string;
+  image: string;
+  accent?: string;
+  tint?: string;
+  phone?: string;
+  featured?: boolean;
+  order?: number;
+};
+
+export async function getSponsors(placement: "adslot" | "strip"): Promise<DbSponsor[]> {
+  try {
+    const res = await fetch(`${BASE}/api/sponsors?placement=${placement}`);
+    if (!res.ok) return [];
+    return res.json();
+  } catch {
+    return [];
+  }
+}
+
 // ---------------- Advertiser leads ----------------
 export async function submitAdvertiser(input: {
   business: string;

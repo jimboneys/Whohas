@@ -6,55 +6,21 @@ import * as WebBrowser from "expo-web-browser";
 import { useFocusEffect } from "expo-router";
 
 import { colors, fonts, spacing, radius, shadow } from "@/src/theme";
-import { getAdClicks, trackAdClick } from "@/src/api";
+import { getAdClicks, trackAdClick, getSponsors, DbSponsor } from "@/src/api";
 import { useSponsorNDA } from "@/src/components/Legal";
 
 const ADVERTISE_EMAIL = "advertise@whohas.app";
-const IMG = "?crop=entropy&cs=srgb&fm=jpg&q=90&w=800";
 
-type Sponsor = { name: string; tagline: string; url: string; image: string; phone?: string };
-type Slot = {
-  key: string;
-  label: string;
-  accent: string;
-  tint: string;
-  featured?: boolean;
-  sponsor?: Sponsor; // present = MOCK sponsored ad; absent = open slot
-};
+type Shell = { key: string; label: string; accent: string; tint: string };
+type Slot = Shell & { featured?: boolean; sponsor?: DbSponsor };
 
-// 3 sponsored (MOCK ads) + 3 open slots.
-const SLOTS: Slot[] = [
-  {
-    key: "deal", label: "Deal of the Day", accent: colors.brand, tint: colors.brandTertiary,
-    sponsor: {
-      name: "ALDI", tagline: "Dozen large eggs — just $2.25 today", url: "https://www.aldi.us/weekly-specials/",
-      image: "https://images.unsplash.com/photo-1582722872445-44dc5f7e3c8f" + IMG,
-    },
-  },
-  {
-    key: "sponsor", label: "Sponsor", accent: colors.success, tint: colors.successSoft,
-    sponsor: {
-      name: "Costco", tagline: "Bulk savings on household staples", url: "https://www.costco.com",
-      image: "https://images.unsplash.com/photo-1542838132-92c53300491e" + IMG,
-    },
-  },
-  {
-    key: "weekly", label: "This Week", accent: "#118AB2", tint: "#E3F2F7",
-    sponsor: {
-      name: "Kroger", tagline: "Weekly digital coupons live now", url: "https://www.kroger.com/weeklyad",
-      image: "https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da" + IMG,
-    },
-  },
+// Slot shells define layout/branding; sponsor CONTENT is loaded from the DB.
+const SLOT_SHELLS: Shell[] = [
+  { key: "deal", label: "Deal of the Day", accent: colors.brand, tint: colors.brandTertiary },
+  { key: "sponsor", label: "Sponsor", accent: colors.success, tint: colors.successSoft },
+  { key: "weekly", label: "This Week", accent: "#118AB2", tint: "#E3F2F7" },
   { key: "flash", label: "Flash Sale", accent: "#FF8C42", tint: "#FFE8D6" },
-  {
-    key: "local", label: "Local Hero", accent: "#EF476F", tint: "#FDE0E8", featured: true,
-    sponsor: {
-      name: "Ton's Hauling", tagline: "Omaha junk removal & hauling — free estimates",
-      url: "https://www.google.com/maps/search/Ton%27s%20Hauling%20Omaha%20NE",
-      image: "https://images.unsplash.com/photo-1519003722824-194d4455a60c" + IMG,
-      phone: "402-810-6319",
-    },
-  },
+  { key: "local", label: "Local Hero", accent: "#EF476F", tint: "#FDE0E8" },
   { key: "coupon", label: "Coupon", accent: "#7B61FF", tint: "#ECE6FF" },
 ];
 
@@ -74,11 +40,19 @@ function openAdvertise(slot: Slot) {
 
 export default function AdSlots() {
   const [clicks, setClicks] = useState<Record<string, number>>({});
+  const [sponsors, setSponsors] = useState<Record<string, DbSponsor>>({});
   const { guard, modal } = useSponsorNDA();
 
   useFocusEffect(
     useCallback(() => {
       getAdClicks().then(setClicks).catch(() => {});
+      getSponsors("adslot")
+        .then((list) => {
+          const map: Record<string, DbSponsor> = {};
+          list.forEach((s) => { map[s.key] = s; });
+          setSponsors(map);
+        })
+        .catch(() => {});
     }, [])
   );
 
@@ -97,9 +71,13 @@ export default function AdSlots() {
     Linking.openURL(`tel:${phone.replace(/[^0-9+]/g, "")}`).catch(() => {});
   };
 
-  const featured = SLOTS.find((s) => s.featured);
-  const rest = SLOTS.filter((s) => !s.featured);
-  const openCount = SLOTS.filter((s) => !s.sponsor).length;
+  const slots: Slot[] = SLOT_SHELLS.map((sh) => {
+    const sp = sponsors[sh.key];
+    return { ...sh, sponsor: sp, featured: !!sp?.featured };
+  });
+  const featured = slots.find((s) => s.featured && s.sponsor);
+  const rest = slots.filter((s) => s.key !== featured?.key);
+  const openCount = slots.filter((s) => !s.sponsor).length;
 
   return (
     <>

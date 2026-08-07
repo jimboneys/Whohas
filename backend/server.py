@@ -740,6 +740,61 @@ async def track_ad_click(key: str, request: Request):
     return {"key": key, "clicks": (doc or {}).get("clicks", 1)}
 
 
+# ---------------- Sponsors (DB-backed; power AdSlots + SponsorStrip) ----------------
+_SIMG = "?crop=entropy&cs=srgb&fm=jpg&q=90&w=800"
+SPONSOR_SEED: List[Dict[str, Any]] = [
+    # Featured Sponsors strip (above search)
+    {"placement": "strip", "key": "deal", "name": "ALDI", "tagline": "Eggs $2.25 today",
+     "url": "https://www.aldi.us/weekly-specials/", "accent": "#FF5A5F", "tint": "#FFEDEE",
+     "image": "https://images.unsplash.com/photo-1582722872445-44dc5f7e3c8f" + _SIMG, "order": 1},
+    {"placement": "strip", "key": "sponsor", "name": "Costco", "tagline": "Bulk savings",
+     "url": "https://www.costco.com", "accent": "#06D6A0", "tint": "#DEF8F0",
+     "image": "https://images.unsplash.com/photo-1542838132-92c53300491e" + _SIMG, "order": 2},
+    {"placement": "strip", "key": "weekly", "name": "Kroger", "tagline": "Weekly coupons",
+     "url": "https://www.kroger.com/weeklyad", "accent": "#118AB2", "tint": "#E3F2F7",
+     "image": "https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da" + _SIMG, "order": 3},
+    # Partner Spots (AdSlots)
+    {"placement": "adslot", "key": "deal", "name": "ALDI", "tagline": "Dozen large eggs — just $2.25 today",
+     "url": "https://www.aldi.us/weekly-specials/",
+     "image": "https://images.unsplash.com/photo-1582722872445-44dc5f7e3c8f" + _SIMG, "order": 1, "featured": False},
+    {"placement": "adslot", "key": "sponsor", "name": "Costco", "tagline": "Bulk savings on household staples",
+     "url": "https://www.costco.com",
+     "image": "https://images.unsplash.com/photo-1542838132-92c53300491e" + _SIMG, "order": 2, "featured": False},
+    {"placement": "adslot", "key": "weekly", "name": "Kroger", "tagline": "Weekly digital coupons live now",
+     "url": "https://www.kroger.com/weeklyad",
+     "image": "https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da" + _SIMG, "order": 3, "featured": False},
+    # Ton's Hauling — booked into the "local" slot, featured.
+    {"placement": "adslot", "key": "local", "name": "Ton's Hauling",
+     "tagline": "Omaha junk removal & hauling — free estimates",
+     "url": "https://www.google.com/maps/search/Ton%27s%20Hauling%20Omaha%20NE",
+     "image": "https://images.unsplash.com/photo-1519003722824-194d4455a60c" + _SIMG,
+     "phone": "402-810-6319", "order": 4, "featured": True},
+]
+
+
+async def seed_sponsors():
+    for s in SPONSOR_SEED:
+        doc = {**s, "active": True}
+        doc.setdefault("featured", False)
+        await db.sponsors.update_one(
+            {"placement": s["placement"], "key": s["key"]},
+            {"$set": doc, "$setOnInsert": {"id": str(uuid.uuid4())}},
+            upsert=True,
+        )
+
+
+@api_router.get("/sponsors")
+async def get_sponsors(placement: str = "adslot"):
+    try:
+        docs = await db.sponsors.find(
+            {"placement": placement, "active": True}, {"_id": 0}
+        ).sort("order", 1).to_list(length=100)
+        return docs
+    except Exception as e:
+        logger.warning(f"get_sponsors failed: {e}")
+        return []
+
+
 # ---------------- Community comments ----------------
 class CommentCreate(BaseModel):
     author: str = Field("Anonymous", max_length=40)
@@ -1132,6 +1187,7 @@ async def _seed_data():
     try:
         await seed_ad_slots()
         await seed_ad_clicks()
+        await seed_sponsors()
         logger.info("Seed data ensured.")
     except Exception as e:
         logger.warning(f"Startup seeding skipped (non-fatal): {e}")

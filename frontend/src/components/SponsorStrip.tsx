@@ -1,27 +1,28 @@
+import { useState, useCallback } from "react";
 import { View, Text, StyleSheet, Pressable, ScrollView, Image } from "react-native";
 import * as Haptics from "expo-haptics";
 import * as WebBrowser from "expo-web-browser";
+import { useFocusEffect } from "expo-router";
 
 import { colors, fonts, spacing, radius, shadow } from "@/src/theme";
-import { trackAdClick } from "@/src/api";
-
-const IMG = "?crop=entropy&cs=srgb&fm=jpg&q=90&w=800";
-
-type Sponsor = { key: string; name: string; tagline: string; url: string; image: string; accent: string; tint: string };
-
-// Sponsored partner boxes shown above the search bar (MOCK ads).
-const SPONSORS: Sponsor[] = [
-  { key: "deal", name: "ALDI", tagline: "Eggs $2.25 today", url: "https://www.aldi.us/weekly-specials/", accent: colors.brand, tint: colors.brandTertiary, image: "https://images.unsplash.com/photo-1582722872445-44dc5f7e3c8f" + IMG },
-  { key: "sponsor", name: "Costco", tagline: "Bulk savings", url: "https://www.costco.com", accent: colors.success, tint: colors.successSoft, image: "https://images.unsplash.com/photo-1542838132-92c53300491e" + IMG },
-  { key: "weekly", name: "Kroger", tagline: "Weekly coupons", url: "https://www.kroger.com/weeklyad", accent: "#118AB2", tint: "#E3F2F7", image: "https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da" + IMG },
-];
+import { trackAdClick, getSponsors, DbSponsor } from "@/src/api";
 
 export default function SponsorStrip() {
-  const press = (s: Sponsor) => {
+  const [sponsors, setSponsors] = useState<DbSponsor[]>([]);
+
+  useFocusEffect(
+    useCallback(() => {
+      getSponsors("strip").then(setSponsors).catch(() => {});
+    }, [])
+  );
+
+  const press = (s: DbSponsor) => {
     Haptics.selectionAsync().catch(() => {});
     trackAdClick(s.key).catch(() => {});
     WebBrowser.openBrowserAsync(s.url).catch(() => {});
   };
+
+  if (sponsors.length === 0) return null;
 
   return (
     <View style={styles.wrap}>
@@ -32,25 +33,28 @@ export default function SponsorStrip() {
         </View>
       </View>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.row}>
-        {SPONSORS.map((s) => (
-          <Pressable
-            key={s.key}
-            testID={`sponsor-box-${s.key}`}
-            style={({ pressed }) => [styles.box, { borderColor: s.accent }, pressed && { opacity: 0.9 }]}
-            onPress={() => press(s)}
-          >
-            <View style={styles.imgWrap}>
-              <Image source={{ uri: s.image }} style={styles.img} />
-              <View style={[styles.adTag, { backgroundColor: s.accent }]}>
-                <Text style={styles.adTagText}>AD</Text>
+        {sponsors.map((s) => {
+          const accent = s.accent || colors.brand;
+          return (
+            <Pressable
+              key={s.key}
+              testID={`sponsor-box-${s.key}`}
+              style={({ pressed }) => [styles.box, { borderColor: accent }, pressed && { opacity: 0.9 }]}
+              onPress={() => press(s)}
+            >
+              <View style={styles.imgWrap}>
+                <Image source={{ uri: s.image }} style={styles.img} />
+                <View style={[styles.adTag, { backgroundColor: accent }]}>
+                  <Text style={styles.adTagText}>AD</Text>
+                </View>
               </View>
-            </View>
-            <View style={styles.body}>
-              <Text style={styles.name} numberOfLines={1}>{s.name}</Text>
-              <Text style={styles.tag} numberOfLines={1}>{s.tagline}</Text>
-            </View>
-          </Pressable>
-        ))}
+              <View style={styles.body}>
+                <Text style={styles.name} numberOfLines={1}>{s.name}</Text>
+                <Text style={styles.tag} numberOfLines={1}>{s.tagline}</Text>
+              </View>
+            </Pressable>
+          );
+        })}
       </ScrollView>
     </View>
   );
